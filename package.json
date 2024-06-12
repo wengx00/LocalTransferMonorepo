@@ -1,0 +1,27 @@
+{
+  "name": "local-transfer-monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "description": "跨平台文件同构传输工具大仓",
+  "main": "index.js",
+  "scripts": {
+    "preinstall": "npx only-allow pnpm",
+    "changeset": "changeset",
+    "version-package": "changeset version",
+    "prepare": "husky install"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@changesets/cli": "^2.27.5",
+    "eslint": "^9.4.0",
+    "husky": "^9.0.11",
+    "typescript-eslint": "^7.13.0"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,mjs,cjs}": [
+      "node --max_old_space_size=8192 ./node_modules/eslint/bin/eslint.js --fix --color --cache --quiet"
+    ]
+  }
+}
