@@ -1,4 +1,4 @@
-appId: com.electron.app
+appId: com.ccweng.local-transfer
 productName: local-transfer-app
 directories:
   buildResources: build
@@ -33,7 +33,7 @@ linux:
     - AppImage
     - snap
     - deb
-  maintainer: electronjs.org
+  maintainer: ccweng
   category: Utility
 appImage:
   artifactName: ${name}-${version}.${ext}

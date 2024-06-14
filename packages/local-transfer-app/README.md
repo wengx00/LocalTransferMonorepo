@@ -99,6 +99,14 @@ pnpm build:linux
 
 - `src/main.ts`：应用注册代码
 
+### Vite 配置
+
+项目使用 electron-vite 构建，`electron.vite.config.ts` 是其构建配置，一般来说无需变更。
+
+### Electron 配置
+
+项目根目录下的 `electron-builder.yml` 是配置 Electron 输出构建的文件，一般来说也无需变更。
+
 ## 常见问题
 
 1. 页面路由规则
