@@ -1,4 +1,4 @@
-import { DialogPlugin, MessagePlugin, NotifyPlugin } from 'tdesign-vue-next';
+import { DialogCloseContext, DialogPlugin, MessagePlugin, NotifyPlugin } from 'tdesign-vue-next';
 
 export type MessageThemeList = 'info' | 'success' | 'warning' | 'error' | 'question' | 'loading';
 export type DialogThemeList = 'info' | 'success' | 'warning' | 'default' | 'danger';
@@ -10,9 +10,9 @@ export interface DialogOptions {
   cancelText?: string | null;
   showOverlay?: boolean;
   theme?: DialogThemeList;
-  onConfirm?: () => void;
-  onCancel?: () => void;
-  onClose?: () => void;
+  onConfirm?: (context: { e: MouseEvent | KeyboardEvent }) => void;
+  onCancel?: (context: { e: MouseEvent }) => void;
+  onClose?: (context: DialogCloseContext) => void;
 }
 
 /**
@@ -32,17 +32,30 @@ export default {
       confirmText = '确认',
       cancelText = '取消'
     } = options;
-    return DialogPlugin.confirm({
+    const dialog = DialogPlugin({
       header,
       body,
       theme,
-      onConfirm,
-      onCancel,
-      onClose,
+      onConfirm: (context) => {
+        dialog.hide();
+        onConfirm?.(context);
+      },
+      onCancel: (context) => {
+        dialog.hide();
+        onCancel?.(context);
+      },
+      onClose: (context) => {
+        dialog.hide();
+        onClose?.(context);
+      },
       showOverlay,
       confirmBtn: confirmText,
-      cancelBtn: cancelText
+      cancelBtn: cancelText,
+      closeOnOverlayClick: true,
+      closeOnEscKeydown: true,
+      destroyOnClose: true
     });
+    return dialog;
   },
   // 弹出提示框
   message: MessagePlugin,

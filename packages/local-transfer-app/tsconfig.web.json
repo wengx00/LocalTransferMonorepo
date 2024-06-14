@@ -22,6 +22,9 @@
       ],
       "@assets/*": [
         "src/renderer/src/assets/*"
+      ],
+      "@components/*": [
+        "src/renderer/src/components/*"
       ]
     },
     "allowSyntheticDefaultImports": true

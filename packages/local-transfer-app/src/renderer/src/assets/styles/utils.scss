@@ -1,0 +1,20 @@
+$mobile: 480px;
+$pad: 768px;
+$desktop: 1024px;
+
+@mixin flex($direction: row, $justify: center, $align: center) {
+  display: flex;
+  flex-direction: $direction;
+  justify-content: $justify;
+  align-items: $align;
+}
+
+@mixin padding($padding: 1.6rem) {
+  box-sizing: border-box;
+  padding: $padding;
+}
+
+@mixin size($width: 100%, $height: 100%) {
+  width: $width;
+  height: $height;
+}

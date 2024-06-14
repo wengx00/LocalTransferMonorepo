@@ -6,7 +6,9 @@ import { useAppConfig } from './utils/store/app-config';
 import debounce from './utils/tools/debounce';
 // 全量引入TDesign，本地包无需担心产物大小
 import TDesign from 'tdesign-vue-next';
-import 'tdesign-vue-next/es/style/index.css';
+// import 'tdesign-vue-next/es/style/index.css';
+import '@assets/styles/reset.scss';
+import '@assets/styles/theme.css';
 
 const pinia = createPinia();
 

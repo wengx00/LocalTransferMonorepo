@@ -15,10 +15,18 @@ export default defineConfig(({ mode }) => ({
         '@renderer': resolve('src/renderer/src'),
         '@pages': resolve('src/renderer/src/pages'),
         '@utils': resolve('src/renderer/src/utils'),
-        '@assets': resolve('src/renderer/src/assets')
+        '@assets': resolve('src/renderer/src/assets'),
+        '@components': resolve('src/renderer/src/components')
       }
     },
     plugins: [vue()],
     base: loadEnv(mode, __dirname)?.VITE_BASE || '/'
+  },
+  css: {
+    preprocessorOptions: {
+      scss: {
+        additionalData: '@use "@/assets/styles/utils.scss" as *;'
+      }
+    }
   }
 }));
