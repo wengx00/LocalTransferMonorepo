@@ -20,6 +20,7 @@
   },
   "devDependencies": {
     "@cc-devtools/eslint-config": "^0.0.4",
+    "@types/node": "^18.19.9",
     "globals": "^15.4.0",
     "typescript": "^5.4.5",
     "vite": "^5.2.10",
