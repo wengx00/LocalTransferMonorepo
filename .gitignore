@@ -4,3 +4,6 @@ node_modules
 dist
 .eslintcache
 .DS_Store
+
+# 暂不上传的项目
+packages/alphabet

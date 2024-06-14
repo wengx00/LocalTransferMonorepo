@@ -14,5 +14,9 @@ module.exports = {
   ],
   rules: {
     'no-console': 'off',
+    'max-classes-per-file': 'off',
+    'no-continue': 'off',
+    'no-multi-assign': 'off',
+    '@typescript-eslint/no-loop-func': 'off',
   },
 };
