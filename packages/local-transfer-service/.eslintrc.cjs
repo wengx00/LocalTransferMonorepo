@@ -18,5 +18,6 @@ module.exports = {
     'no-continue': 'off',
     'no-multi-assign': 'off',
     '@typescript-eslint/no-loop-func': 'off',
+    '@typescript-eslint/require-await': 'off',
   },
 };
