@@ -1,8 +1,11 @@
-import { contextBridge } from 'electron';
 import { electronAPI } from '@electron-toolkit/preload';
+import { contextBridge, webContents } from 'electron';
+import makeInstance from '../shared/make-instance';
 
 // Custom APIs for renderer
-const api = {};
+const api = {
+  service: makeInstance(webContents.getFocusedWebContents()!)
+};
 
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise
