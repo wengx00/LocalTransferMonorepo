@@ -5,7 +5,8 @@
     "src/renderer/src/**/*",
     "src/renderer/src/**/*.vue",
     "src/renderer/src/**/*.ts",
-    "src/preload/*.d.ts"
+    "src/preload/*.d.ts",
+    "src/shared/@types/*.d.ts"
   ],
   "compilerOptions": {
     "composite": true,
@@ -25,6 +26,9 @@
       ],
       "@components/*": [
         "src/renderer/src/components/*"
+      ],
+      "@apis/*": [
+        "src/renderer/src/apis/*"
       ]
     },
     "allowSyntheticDefaultImports": true

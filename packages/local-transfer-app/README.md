@@ -119,3 +119,51 @@ pnpm build:linux
    - 以 `components` 命名的目录不会命中路由规则，而是会作为页面的子组件来看待。
 
 2. 关于 `.env` 文件、vite 配置等，详见 [Vite 官网](https://cn.vitejs.dev/config/)
+
+## 渲染进程和主进程 IPC 通信
+
+我们知道不同进程间的对象（尤其是渲染进程和 Node.js 主进程之间）是没法共享单例的，为了解决渲染进程和主进程事件处理一致性的问题，项目使用了一些 TypeScript 的 trick，通过 `.d.ts` 拉齐全部 API invoke 和 listener 的参数类型。
+
+> `.d.ts` 只是 TypeScript 在编译前的产物，他会在编译后蒸发，请不要陷入“主进程和渲染进程共享了同一份对象”的误区
+
+作为开发者，其实无需关心实现细节，只需要明白两个问题：
+
+- 如何调用接口
+
+- 如何添加监听器
+
+### 渲染进程调用接口
+
+首先我们可以看到 `electron-vite.config.ts` 和 `tsconfig.web.json` 都已经配置好了 `src/renderer/src/apis` 的别名为 `@apis`，这意味着我们在引入这个目录中的东西时直接以 `@api` 为前缀即可
+
+`@api` 目录下的每一个文件，都对应了 `@shared/types` 下的一个 `.d.ts` 中定义的接口。你可以在页面组件中这么引用
+
+```typescript
+import serviceApi from '@apis/service';
+import { ServiceInfo } from 'local-transfer-service';
+
+function addVerifiedDevice(target: ServiceInfo) {
+  serviceApi.invoke.addVerifiedDevice(target.id);
+}
+```
+
+即 `xxxApi.invoke.<command>` 的形式，如上的例子是“添加受信设备”的调用
+
+使用 VS Code 或者其他智能 IDE，即可拥有**全部的类型提示**（类型的定义在 `src/shared/@types/xxxApi.d.ts` 中）
+
+
+### 渲染进程添加监听器
+
+类似上面的引入操作，只不过调用的代码改为了
+
+`xxxApi.listener.<event>(handler)`
+
+比如：
+
+```typescript
+import serviceApi from '@apis/service';
+
+serviceApi.listener.onReceiveFile((context) => {
+  console.log(context);
+});
+```

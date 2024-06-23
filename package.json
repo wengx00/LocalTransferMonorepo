@@ -26,6 +26,7 @@
     ]
   },
   "dependencies": {
-    "local-transfer-service": "workspace:^"
+    "local-transfer-service": "workspace:^",
+    "nanoid": "^5.0.7"
   }
 }

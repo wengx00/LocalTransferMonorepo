@@ -31,7 +31,6 @@
     "typescript": "^5.4.5"
   },
   "dependencies": {
-    "ip": "^2.0.1",
-    "nanoid": "^5.0.7"
+    "ip": "^2.0.1"
   }
 }

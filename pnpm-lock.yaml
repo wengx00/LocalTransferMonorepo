@@ -11,6 +11,9 @@ importers:
       local-transfer-service:
         specifier: workspace:^
         version: link:packages/local-transfer-service
+      nanoid:
+        specifier: ^5.0.7
+        version: 5.0.7
     devDependencies:
       '@changesets/cli':
         specifier: ^2.27.5
@@ -109,9 +112,6 @@ importers:
       ip:
         specifier: ^2.0.1
         version: 2.0.1
-      nanoid:
-        specifier: ^5.0.7
-        version: 5.0.7
     devDependencies:
       '@cc-devtools/eslint-config':
         specifier: ^0.0.4
