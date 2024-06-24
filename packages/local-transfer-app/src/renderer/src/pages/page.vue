@@ -1,16 +1,20 @@
 <template>
-  <div>Hello Index</div>
+  <div class="root">
+    <h2>Hello Index</h2>
+    <t-button @click="router.push('/test')">打开测试页面</t-button>
+  </div>
 </template>
 
 <script setup lang="ts">
-import interact from '@renderer/utils/interact';
-import { onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 
-onMounted(() => {
-  interact.dialog({
-    body: 'Hello Dialog'
-  });
-});
+const router = useRouter();
 </script>
 
-<style scoped></style>
+<style lang="scss" scoped>
+.root {
+  @include flex(column, flex-start, center);
+
+  gap: 1.6rem;
+}
+</style>

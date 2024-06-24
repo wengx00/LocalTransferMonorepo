@@ -2,6 +2,8 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron';
 import { join } from 'path';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import icon from '../../resources/icon.png?asset';
+import makeInstance from './utils/make-instance';
+import NativeApiHelper from './helpers/NativeApiHelper';
 
 function createWindow(): void {
   // Create the browser window.
@@ -13,6 +15,7 @@ function createWindow(): void {
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
+      contextIsolation: true,
       sandbox: false
     }
   });
@@ -25,6 +28,8 @@ function createWindow(): void {
     shell.openExternal(details.url);
     return { action: 'deny' };
   });
+
+  makeInstance(new NativeApiHelper(), mainWindow.webContents);
 
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
@@ -40,7 +45,7 @@ function createWindow(): void {
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
   // Set app user model id for windows
-  electronApp.setAppUserModelId('com.electron');
+  electronApp.setAppUserModelId('com.ccweng');
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.

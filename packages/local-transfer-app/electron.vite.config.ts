@@ -22,12 +22,12 @@ export default defineConfig(({ mode }) => ({
       }
     },
     plugins: [vue()],
-    base: loadEnv(mode, __dirname)?.VITE_BASE || '/'
-  },
-  css: {
-    preprocessorOptions: {
-      scss: {
-        additionalData: '@use "@/assets/styles/utils.scss" as *;'
+    base: loadEnv(mode, __dirname)?.VITE_BASE || '/',
+    css: {
+      preprocessorOptions: {
+        scss: {
+          additionalData: '@use "@assets/styles/utils.scss" as *;'
+        }
       }
     }
   }
