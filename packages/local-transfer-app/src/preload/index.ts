@@ -1,6 +1,6 @@
 import { electronAPI } from '@electron-toolkit/preload';
 import { contextBridge, webContents } from 'electron';
-import makeInstance from '../shared/make-instance';
+import makeInstance from './make-instance';
 
 // Custom APIs for renderer
 const api = {
