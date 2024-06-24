@@ -84,7 +84,7 @@ declare module '@ipc/service' {
       refresh(): void;
     };
     listener: {
-      onReceiveFile(handler: ReceiveHandler): void;
+      receiveFile(handler: ReceiveHandler): void;
     };
   }
 }

@@ -1,5 +1,5 @@
 appId: com.ccweng.local-transfer
-productName: local-transfer-app
+productName: 内网文件同传
 directories:
   buildResources: build
 files:
@@ -12,7 +12,7 @@ files:
 asarUnpack:
   - resources/**
 win:
-  executableName: local-transfer-app
+  executableName: 内网文件同传
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}

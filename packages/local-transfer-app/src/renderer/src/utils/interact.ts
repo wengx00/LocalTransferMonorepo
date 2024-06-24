@@ -4,8 +4,8 @@ export type MessageThemeList = 'info' | 'success' | 'warning' | 'error' | 'quest
 export type DialogThemeList = 'info' | 'success' | 'warning' | 'default' | 'danger';
 
 export interface DialogOptions {
-  body: string;
-  header?: string;
+  content: string;
+  title?: string;
   confirmText?: string | null;
   cancelText?: string | null;
   showOverlay?: boolean;
@@ -22,13 +22,13 @@ export default {
   // 弹出对话框
   dialog(options: DialogOptions) {
     const {
-      body,
+      content: body,
+      title: header = '提示',
       theme,
       onConfirm,
       onCancel,
       onClose,
       showOverlay = true,
-      header = '提示',
       confirmText = '确认',
       cancelText = '取消'
     } = options;

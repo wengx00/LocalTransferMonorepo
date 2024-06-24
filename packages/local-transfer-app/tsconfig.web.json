@@ -29,6 +29,9 @@
       ],
       "@apis/*": [
         "src/renderer/src/apis/*"
+      ],
+      "@shared/*": [
+        "src/shared/*"
       ]
     },
     "allowSyntheticDefaultImports": true
