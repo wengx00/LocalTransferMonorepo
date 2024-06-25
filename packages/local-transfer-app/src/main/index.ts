@@ -4,6 +4,8 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import icon from '../../resources/icon.png?asset';
 import makeInstance from './utils/make-instance';
 import NativeApiHelper from './helpers/NativeApiHelper';
+import ServiceApiHelper from './helpers/ServiceApiHelper';
+import namespace from '@shared/namespace';
 
 function createWindow(): void {
   // Create the browser window.
@@ -29,7 +31,8 @@ function createWindow(): void {
     return { action: 'deny' };
   });
 
-  makeInstance(new NativeApiHelper(), mainWindow.webContents);
+  makeInstance(namespace.native, new NativeApiHelper(), mainWindow.webContents);
+  makeInstance(namespace.service, new ServiceApiHelper(), mainWindow.webContents);
 
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.

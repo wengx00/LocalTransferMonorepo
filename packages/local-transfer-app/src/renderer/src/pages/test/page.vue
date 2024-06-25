@@ -1,5 +1,14 @@
 <template>
   <div class="root">
+    <div class="row">设备ID: {{ serviceId }}</div>
+    <div class="row">
+      <div style="flex-shrink: 0">设备名称：</div>
+      <t-input v-model="serviceName" placeholder="未指定设备名称" />
+      <t-button style="flex-shrink: 0" :disabled="serviceName.length === 0" @click="setServiceName">
+        修改名称
+      </t-button>
+      <t-button style="flex-shrink: 0" theme="default" @click="getServiceName">获取名称</t-button>
+    </div>
     <t-button @click="openFileDialog">打开文件选择框</t-button>
     <div class="row">
       <t-select v-model="pathType" placeholder="选择目录类型">
@@ -17,10 +26,14 @@
 <script setup lang="ts">
 import { PathType } from '@ipc/native';
 import nativeApi from '@renderer/apis/native';
+import serviceApi from '@renderer/apis/service';
 import interact from '@renderer/utils/interact';
+import { onMounted } from 'vue';
 import { ref } from 'vue';
 
 const pathType = ref('');
+const serviceId = ref('');
+const serviceName = ref('');
 
 // 打开文件选择框
 async function openFileDialog() {
@@ -48,7 +61,8 @@ async function openFileDialog() {
 
   interact.dialog({
     title: '选择文件',
-    content: result.length ? result.join(', ') : '未选择任何文件'
+    content: result.length ? result.join(', ') : '未选择任何文件',
+    cancelText: null
   });
 }
 
@@ -58,19 +72,41 @@ async function getTargetPath() {
     interact.message.error('请选择目录类型');
     return;
   }
-  nativeApi.invoke
-    .getPath(pathType.value as PathType)
-    .then((path) => {
-      interact.dialog({
-        title: '目标路径',
-        content: path
-      });
+
+  try {
+    const path = await nativeApi.invoke.getPath(pathType.value as PathType);
+    interact.dialog({
+      title: '目标路径',
+      content: path
+    });
+  } catch (err) {
+    console.log(err);
+    interact.message.error(String(err));
+  }
+}
+
+// 修改设备名称
+function setServiceName() {
+  serviceApi.invoke
+    .setName(serviceName.value)
+    .then(() => {
+      interact.message.success('设备名称修改成功');
     })
-    .catch((err) => {
-      console.log(err);
+    .catch(async (err) => {
       interact.message.error(String(err));
+      serviceName.value = await serviceApi.invoke.getName();
     });
 }
+
+// 获取设备名称
+async function getServiceName() {
+  serviceName.value = await serviceApi.invoke.getName();
+}
+
+onMounted(async () => {
+  serviceId.value = await serviceApi.invoke.getId();
+  getServiceName();
+});
 </script>
 
 <style lang="scss" scoped>

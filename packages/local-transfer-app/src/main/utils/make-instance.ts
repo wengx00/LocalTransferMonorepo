@@ -1,12 +1,13 @@
 import { WebContents, ipcMain } from 'electron';
 
 export default function makeInstance<T extends IpcApi>(
+  namespace: string,
   helper: IpcMainHelper<T>,
   webContents?: WebContents
 ) {
   const emitter = {};
 
-  const channelName = `ns-${0}`;
+  const channelName = `ns-${namespace}-${0}`;
 
   ipcMain.handle(channelName, async (_event, cmd: string, ...args: any[]) => {
     if (helper.handler[cmd]) {

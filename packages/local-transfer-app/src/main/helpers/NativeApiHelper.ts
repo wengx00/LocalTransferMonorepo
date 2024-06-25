@@ -3,8 +3,8 @@ import { app, dialog } from 'electron';
 
 export default class NativeApiHelper implements IpcMainHelper<NativeApi> {
   handler: NativeApi['invoke'] = {
-    async getPath(type) {
-      return app.getPath(type);
+    getPath(type) {
+      return app.getPath(type) as any;
     },
     openFileDialog(options) {
       const { title, defaultPath, buttonLabel, filters = [], properties = {} } = options ?? {};
