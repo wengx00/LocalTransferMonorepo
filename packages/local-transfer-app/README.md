@@ -120,6 +120,31 @@ pnpm build:linux
 
 2. 关于 `.env` 文件、vite 配置等，详见 [Vite 官网](https://cn.vitejs.dev/config/)
 
+3. 本项目是 Monorepo，App 依赖于 `pnpm-workspace` 中的 `local-transfer-service` 包，该包存在于 Monorepo 下的 `packages/local-transfer-service`
+
+4. `pnpm dev` 提示 "Electron uninstall" 的错误？
+
+   > 问题和解决方法来源：[@pwq](https://github.com/pwqispwq)
+
+   就是 Electron 没有安装成功，这个时候你需要：
+
+   - 清除 pnpm 缓存：`pnpm store prune`
+
+   - 配置一个你能访问的源：
+
+     ```bash
+     npm config set registry 源地址
+     ```
+
+     - 腾讯源：https://mirrors.tencent.com/npm/
+     - 淘宝源：https://registry.npmmirror.com/
+     - （默认）官方源：https://registry.npmjs.org/
+
+   - 重新安装依赖：`pnpm install`
+
+
+
+
 ## 渲染进程和主进程 IPC 通信
 
 我们知道不同进程间的对象（尤其是渲染进程和 Node.js 主进程之间）是没法共享单例的，为了解决渲染进程和主进程事件处理一致性的问题，项目使用了一些 TypeScript 的 trick，通过 `.d.ts` 拉齐全部 API invoke 和 listener 的参数类型。
@@ -167,3 +192,9 @@ serviceApi.listener.onReceiveFile((context) => {
   console.log(context);
 });
 ```
+
+### 调用示例
+
+可以在 `@pages/test/page.vue` 中看到测试的示例代码，包含调用成功提示、异常捕获等状态提示。
+
+注意示例代码中混用了 `async/await` 和 Promise 回调（大杂烩），只是为了说明这两种方式都可以，在实际页面开发中请尽量保持统一和规范。
