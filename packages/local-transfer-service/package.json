@@ -15,7 +15,9 @@
     "require": "./dist/index.cjs"
   },
   "scripts": {
-    "build": "tsc && cross-env NODE_ENV=production rollup --config rollup.config.js"
+    "build": "pnpm test && tsc && cross-env NODE_ENV=production rollup --config rollup.config.js",
+    "test": "vitest run",
+    "lint": "eslint --fix --color --cache --quiet"
   },
   "devDependencies": {
     "@cc-devtools/eslint-config": "^0.0.4",
@@ -28,7 +30,8 @@
     "@types/node": "^18.19.9",
     "cross-env": "^7.0.3",
     "rollup": "^4.18.0",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
   },
   "dependencies": {
     "ip": "^2.0.1"
