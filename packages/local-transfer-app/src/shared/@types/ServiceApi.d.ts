@@ -13,62 +13,62 @@ declare module '@ipc/service' {
       /**
        * 获取设备唯一 ID (8 位 nanoid)
        */
-      getId(): string;
+      getId(): Promise<string>;
 
       /**
        * 获取设备名称
        */
-      getName(): string;
+      getName(): Promise<string>;
 
       /**
        * 设置设备名称
        * @param name 设备名称
        */
-      setName(name: string): void;
+      setName(name: string): Promise<void>;
 
       /**
        * 设置 TCP 端口，注意，更改可能产生副作用，传输文件的过程可能中断
        * @param port 本地端口
        */
-      setTcpPort(port: number): void;
+      setTcpPort(port: number): Promise<void>;
 
       /**
        * 设置下载根目录
        * @param path 下载根目录
        */
-      setDownloadRoot(path: string): void;
+      setDownloadRoot(path: string): Promise<void>;
 
       /**
        * 获取可用设备列表
        * @returns 可用设备列表
        */
-      getAvailableServices(): ServiceInfo[];
+      getAvailableServices(): Promise<ServiceInfo[]>;
 
       /**
        * 获取受信设备列表
        * @returns 受信设备列表
        */
-      getVerifiedDevices(): ServiceInfo[];
+      getVerifiedDevices(): Promise<ServiceInfo[]>;
 
       /**
        * 添加受信设备
        * @param id 可用设备ID
        * @returns 更新后的的受信设备列表
        */
-      addVerifiedDevice(id: string): ServiceInfo[];
+      addVerifiedDevice(id: string): Promise<ServiceInfo[]>;
 
       /**
        * 删除受信设备
        * @returns 更新后的的受信设备列表
        * @param id 受信设备ID
        */
-      removeVerifiedDevice(id: string): ServiceInfo[];
+      removeVerifiedDevice(id: string): Promise<ServiceInfo[]>;
 
       /**
        * 清空受信列表
        * @returns 更新后的的受信设备列表，永远返回空数组
        */
-      clearVerifiedDevices(): ServiceInfo[];
+      clearVerifiedDevices(): Promise<ServiceInfo[]>;
 
       /**
        * 指定目标发送文件
@@ -84,7 +84,7 @@ declare module '@ipc/service' {
       refresh(): void;
     };
     listener: {
-      receiveFile(handler: ReceiveHandler): void;
+      receiveFile(handler: ReceiveHandler): Promise<void>;
     };
   }
 }

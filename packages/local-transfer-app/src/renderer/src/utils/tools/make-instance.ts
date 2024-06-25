@@ -3,12 +3,15 @@ import { nanoid } from 'nanoid';
 
 const ipcRenderer = window.electron.ipcRenderer;
 
-export default function makeInstance<T extends IpcApi>(webContents?: WebContents) {
+export default function makeInstance<T extends IpcApi>(
+  namespace: string,
+  webContents?: WebContents
+) {
   const invoke = {};
   const listener = {};
 
   const webContentsId = webContents?.id || 0;
-  const channelName = `ns-${webContentsId}`;
+  const channelName = `ns-${namespace}-${webContentsId}`;
 
   const listenerRecords: Record<string, Map<string, (...args: any[]) => any>> = {};
 

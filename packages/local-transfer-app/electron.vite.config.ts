@@ -4,7 +4,10 @@ import vue from '@vitejs/plugin-vue';
 
 export default defineConfig(({ mode }) => ({
   main: {
-    plugins: [externalizeDepsPlugin()]
+    plugins: [externalizeDepsPlugin()],
+    resolve: {
+      alias: { '@shared': resolve('src/shared') }
+    }
   },
   preload: {
     plugins: [externalizeDepsPlugin()]
