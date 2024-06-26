@@ -75,6 +75,23 @@ export interface SendFileException extends FileInfo {
   reason: string;
 }
 
+// 发送文本的请求和响应类型
+export interface SendTextRequest {
+  // 文本内容
+  text: string;
+  // 目标设备ID
+  targetId: string;
+}
+
+// 发送文本reso的结果
+export interface SendTextResult extends FileInfo {}
+
+// 发送文本Reject时抛出的错误
+export interface SendTextException {
+  // 失败原因
+  reason: string;
+}
+
 // 接收文件监听器
 export type ReceiveHandler = (
   context: FileInfo & {
@@ -92,10 +109,16 @@ export interface IService {
   getId(): string;
 
   getName(): string;
+
   setName(name: string): void;
 
   setTcpPort(port: number): void;
+
+  getTcpPort(): number;
+
   setDownloadRoot(downloadRoot: string): void;
+
+  getDownloadRoot(): string;
 
   // 刷新可用设备列表
   refresh(): void;
@@ -115,6 +138,8 @@ export interface IService {
   addReceiveHandler(handler: ReceiveHandler): void;
   // 删除接收文件监听器
   removeReceiveHandler(handler: ReceiveHandler): void;
+  // 发送文本
+  sendText(request: SendTextRequest): Promise<SendTextResult>;
 }
 
 /**
@@ -133,6 +158,111 @@ export class Service implements IService {
     this.initServiceInfo();
     this.initTcpServer();
     this.initUdpSocket();
+  }
+
+  sendText(request: SendTextRequest): Promise<SendTextResult> {
+    const { text, targetId } = request;
+    return new Promise((resolve, reject) => {
+      if (!text || !targetId) {
+        reject(JsonResponse.fail(errcode.BAD_REQUEST, '参数错误'));
+        return;
+      }
+
+      const target = this.availableServices.find(({ id }) => id === targetId);
+
+      if (!target) {
+        reject(JsonResponse.fail(errcode.NOT_FOUND, '目标设备不存在'));
+        return;
+      }
+
+      const { ip: host, port } = target;
+      const batchId = nanoid(12);
+      const fileInfo: FileInfo = {
+        filename: '',
+        size: text.length,
+        batchId,
+        type: 2,
+      };
+
+      const socket = createConnection({
+        port,
+        host,
+      });
+
+      const proxy = new Protocol(socket);
+      let chunk: Buffer = Buffer.alloc(0);
+      let verified = false;
+      let socketError = false;
+
+      const proxyHandler = async ({
+        buffer,
+        error,
+        status,
+      }: HandlerContext) => {
+        if (verified) {
+          return;
+        }
+
+        verified = true;
+
+        if (error) {
+          reject(JsonResponse.fail(errcode.PROTOCOL_EXCEPTION, error.message));
+          socket.end();
+          return;
+        }
+
+        if (status !== ProtocolStatus.DONE) {
+          chunk = Buffer.concat([chunk, buffer]);
+          return;
+        }
+
+        const { retcode, errMsg } = JSON.parse(
+          chunk.toString('utf-8'),
+        ) as JsonResponse;
+
+        if (retcode !== 0) {
+          reject(JsonResponse.fail(retcode, errMsg));
+          socket.end();
+          return;
+        }
+
+        chunk = Buffer.alloc(0);
+
+        // 开始发送数据
+        await proxy.sendBytes(JSON.stringify(fileInfo));
+        if (socketError) {
+          return;
+        }
+
+        await proxy.sendBytes(text);
+        if (socketError) {
+          return;
+        }
+
+        // 完成传输
+        resolve({
+          ...fileInfo,
+        });
+      };
+
+      proxy.addHandler(proxyHandler);
+
+      socket.on('end', () => proxy.removeHandler(proxyHandler));
+
+      socket.on('error', () => {
+        socketError = true;
+        proxy.removeHandler(proxyHandler);
+        reject(JsonResponse.fail(errcode.SOCKET_ERROR, 'socket error'));
+      });
+    });
+  }
+
+  getTcpPort(): number {
+    return this.tcpPort;
+  }
+
+  getDownloadRoot(): string {
+    return this.downloadRoot;
   }
 
   getId(): string {
@@ -233,6 +363,7 @@ export class Service implements IService {
           filename: path.split(divider).pop()!,
           size,
           batchId,
+          type: 1,
         };
 
         const socket = createConnection({
