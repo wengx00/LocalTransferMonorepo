@@ -6,3 +6,12 @@ export interface FileInfo {
   // 文件大小
   size: number;
 }
+
+export interface TextInfo {
+  // 文本内容
+  text: string;
+  // 文本大小
+  size: number;
+  // 传输批次ID
+  batchId: string;
+}
