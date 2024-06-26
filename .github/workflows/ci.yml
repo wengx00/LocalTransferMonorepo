@@ -48,7 +48,7 @@ jobs:
       - name: ESLint 检查
         run: cd packages/local-transfer-app && pnpm run lint
       - name: 构建检查
-        run: cd packages/loacl-transfer-service && pnpm run build && cd ../packages/local-transfer-app && pnpm run build
+        run: cd packages/local-transfer-service && pnpm run build && cd ../packages/local-transfer-app && pnpm run build
 
 
       
