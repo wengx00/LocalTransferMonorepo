@@ -632,6 +632,11 @@ export class Service implements IService {
       });
     });
 
+    if (process.env.RUNTIME === 'test') {
+      return;
+    }
+
+    // 如果 RUNTIME 是测试，则不开启 TCP 服务
     this.tcpServer.listen(this.tcpPort, () => {
       console.log(`TCP Server listening on ${ip.address()}:${this.tcpPort}`);
     });
@@ -723,6 +728,10 @@ export class Service implements IService {
     };
 
     this.udpSocket = createUdpSocket('udp4', udpHandler.bind(this));
+    // 如果 RUNTIME 是测试，则不开启 UDP 服务
+    if (process.env.RUNTIME === 'test') {
+      return;
+    }
     // UDP 只能使用熟知端口 86
     this.udpSocket.bind(86, () => {
       console.log(`UDP Server listening on ${ip.address()}:86`);
