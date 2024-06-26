@@ -1,20 +1,27 @@
 <template>
-  <div class="root">
-    <h2>Hello Index</h2>
-    <t-button @click="router.push('/test')">打开测试页面</t-button>
+  <div class="app">
+    <Sidebar />
+    <t-footer class="footer">Copyright @ 2024-{{ new Date().getFullYear() }} LocalTransfer. All Rights
+      Reserved</t-footer>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router';
+import Sidebar from './Sidebar.vue';
 
-const router = useRouter();
 </script>
 
-<style lang="scss" scoped>
-.root {
-  @include flex(column, flex-start, center);
+<style scoped>
+.app {
+  height: 90vh;
+  flex-direction: row;
+}
 
-  gap: 1.6rem;
+.footer {
+  display: flex;
+  justify-content: center;
+  background-color: #ffffff;
+  height: 10vh;
+  box-shadow: 0px 0px 5px 1px rgb(0, 0, 0);
 }
 </style>
