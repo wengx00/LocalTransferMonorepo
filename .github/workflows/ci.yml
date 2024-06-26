@@ -25,8 +25,18 @@ jobs:
         run: npm i -g pnpm
       - name: Install dependencies
         run: pnpm install
-      - name: Trigger Service 流水线
-        uses: ./.github/actions/service-ci.yml
+      - name: ESLint 检查
+        run: 
+          - cd packages/local-transfer-service
+          - pnpm run lint
+      - name: 单元测试检查
+        run:
+          - cd packages/local-transfer-service
+          - pnpm run test
+      - name: 构建检查
+        run:
+          - cd packages/local-transfer-service
+          - pnpm run build
   app_build_check:
     name: App 构建检查
     runs-on: ubuntu-latest
@@ -41,8 +51,14 @@ jobs:
         run: npm i -g pnpm
       - name: Install dependencies
         run: pnpm install
-      - name: Trigger App 流水线
-        uses: ./.github/actions/app-ci.yml
+      - name: ESLint 检查
+        run: 
+          - cd packages/local-transfer-app
+          - pnpm run lint
+      - name: 构建检查
+        run:
+          - cd packages/local-transfer-app
+          - pnpm run build
 
 
       
