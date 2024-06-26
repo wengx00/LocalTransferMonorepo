@@ -47,8 +47,10 @@ jobs:
         run: pnpm install
       - name: ESLint 检查
         run: cd packages/local-transfer-app && pnpm run lint
+      - name: Service 生成
+        run: cd packages/local-transfer-service && pnpm run build
       - name: 构建检查
-        run: cd packages/local-transfer-service && pnpm run build && cd ../packages/local-transfer-app && pnpm run build
+        run: cd packages/local-transfer-app && pnpm run build
 
 
       
