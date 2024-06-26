@@ -24,15 +24,14 @@ on:
       - release/*
 
 jobs:
-  service-build-check:
+  service_build_check:
     name: Service 构建检查
     runs-on: ubuntu-latest
     steps: 
       *init
       - name: Trigger Service 流水线
         uses: ./.github/actions/service-ci.yml
-
-  app-build-check:
+  app_build_check:
     name: App 构建检查
     runs-on: ubuntu-latest
     steps: 
