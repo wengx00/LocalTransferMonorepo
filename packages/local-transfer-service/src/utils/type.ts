@@ -1,17 +1,10 @@
 export interface FileInfo {
   // 传输批次ID
   batchId: string;
-  // 原始文件名
+  // 原始文件名 为文本此属性为空
   filename: string;
   // 文件大小
   size: number;
-}
-
-export interface TextInfo {
-  // 文本内容
-  text: string;
-  // 文本大小
-  size: number;
-  // 传输批次ID
-  batchId: string;
+  // 类型 1为文件，2为文本
+  type: number;
 }
