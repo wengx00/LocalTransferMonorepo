@@ -23,87 +23,18 @@ import { nanoid } from 'nanoid';
 import { HandlerContext, Protocol, ProtocolStatus } from './protocol';
 import errcode from '../utils/errcode';
 import JsonResponse from '../utils/json-response';
-import { FileInfo } from '../utils/type';
+import {
+  ReceiveFileHandler,
+  ReceiveTextHandler,
+  SendFileRequest,
+  SendFileResult,
+  SendTextRequest,
+  SendTextResult,
+  ServiceInfo,
+  TransferInfo,
+  TransferType,
+} from '../utils/type';
 import UdpMessage from '../utils/udp-message';
-
-// Service初始化选项
-export interface ServiceInitOptions {
-  // 下载根目录
-  downloadRoot: string;
-}
-
-// 服务信息
-export interface ServiceInfo {
-  // 目标设备IP
-  ip: string;
-  // 目标 Service TCP 端口
-  port: number;
-  // 目标 Service ID
-  id: string;
-  // 目标 Service 名称
-  name: string;
-}
-
-// 发送文件请求
-export interface SendFileRequest {
-  // 本地文件路径
-  path: string;
-  // 目标设备ID
-  targetId: string;
-  // 传输任务创建成功回调
-  onLaunch?: (context: FileInfo) => any;
-  // 传输进度回调
-  onProgress?: (
-    context: FileInfo & {
-      // 当前传输进度 (0-100)%
-      progress: number;
-      // 实时速率 KB/s
-      speed: number;
-    },
-  ) => any;
-}
-
-// 发送文件Resolve时返回的结果
-export interface SendFileResult extends FileInfo {
-  // 总耗时
-  cost: number;
-}
-
-// 发送文件Reject时抛出的错误
-export interface SendFileException extends FileInfo {
-  // 失败原因
-  reason: string;
-}
-
-// 发送文本的请求和响应类型
-export interface SendTextRequest {
-  // 文本内容
-  text: string;
-  // 目标设备ID
-  targetId: string;
-}
-
-// 发送文本reso的结果
-export interface SendTextResult extends FileInfo {}
-
-// 发送文本Reject时抛出的错误
-export interface SendTextException {
-  // 失败原因
-  reason: string;
-}
-
-// 接收文件监听器
-export type ReceiveHandler = (
-  context: FileInfo & {
-    // 当前传输进度 (0-100)%
-    progress: number;
-    // 实时速率 KB/s
-    speed: number;
-    // 是否已结束
-    done: boolean;
-  },
-  err?: JsonResponse,
-) => any;
 
 export interface IService {
   getId(): string;
@@ -135,9 +66,13 @@ export interface IService {
   // 指定目标发送文件
   sendFile(request: SendFileRequest): Promise<SendFileResult>;
   // 注册接收文件监听器
-  addReceiveHandler(handler: ReceiveHandler): void;
+  addReceiveFileHandler(handler: ReceiveFileHandler): void;
+  // 注册接收文本监听器
+  addReceiveTextHandler(handler: ReceiveTextHandler): void;
   // 删除接收文件监听器
-  removeReceiveHandler(handler: ReceiveHandler): void;
+  removeFileReceiveHandler(handler: ReceiveFileHandler): void;
+  // 删除接收文本监听器
+  removeReceiveTextHandler(handler: ReceiveTextHandler): void;
   // 发送文本
   sendText(request: SendTextRequest): Promise<SendTextResult>;
 }
@@ -160,6 +95,14 @@ export class Service implements IService {
     this.initUdpSocket();
   }
 
+  removeReceiveTextHandler(handler: ReceiveTextHandler): void {
+    this.receiveTextHandlers.delete(handler);
+  }
+
+  addReceiveTextHandler(handler: ReceiveTextHandler): void {
+    this.receiveTextHandlers.add(handler);
+  }
+
   sendText(request: SendTextRequest): Promise<SendTextResult> {
     const { text, targetId } = request;
     return new Promise((resolve, reject) => {
@@ -177,11 +120,12 @@ export class Service implements IService {
 
       const { ip: host, port } = target;
       const batchId = nanoid(12);
-      const fileInfo: FileInfo = {
+      const fileInfo: TransferInfo = {
         filename: '',
         size: text.length,
         batchId,
-        type: 2,
+        type: TransferType.TEXT,
+        sourceId: this.id,
       };
 
       const socket = createConnection({
@@ -203,8 +147,6 @@ export class Service implements IService {
           return;
         }
 
-        verified = true;
-
         if (error) {
           reject(JsonResponse.fail(errcode.PROTOCOL_EXCEPTION, error.message));
           socket.end();
@@ -215,6 +157,8 @@ export class Service implements IService {
           chunk = Buffer.concat([chunk, buffer]);
           return;
         }
+
+        verified = true;
 
         const { retcode, errMsg } = JSON.parse(
           chunk.toString('utf-8'),
@@ -240,9 +184,7 @@ export class Service implements IService {
         }
 
         // 完成传输
-        resolve({
-          ...fileInfo,
-        });
+        resolve(fileInfo);
       };
 
       proxy.addHandler(proxyHandler);
@@ -287,12 +229,12 @@ export class Service implements IService {
     this.downloadRoot = downloadRoot;
   }
 
-  addReceiveHandler(handler: ReceiveHandler): void {
-    this.receiveHandlers.add(handler);
+  addReceiveFileHandler(handler: ReceiveFileHandler): void {
+    this.receiveFileHandlers.add(handler);
   }
 
-  removeReceiveHandler(handler: ReceiveHandler): void {
-    this.receiveHandlers.delete(handler);
+  removeFileReceiveHandler(handler: ReceiveFileHandler): void {
+    this.receiveFileHandlers.delete(handler);
   }
 
   getAvailableServices(): ServiceInfo[] {
@@ -358,12 +300,13 @@ export class Service implements IService {
           reject(JsonResponse.fail(errcode.BAD_REQUEST, '目标路径不是文件'));
           return;
         }
-        // 先发送 FileInfo
-        const fileInfo: FileInfo = {
+        // 先发送 TransferInfo
+        const transferInfo: TransferInfo = {
           filename: path.split(divider).pop()!,
           size,
           batchId,
-          type: 1,
+          type: TransferType.FILE,
+          sourceId: this.id,
         };
 
         const socket = createConnection({
@@ -381,11 +324,10 @@ export class Service implements IService {
           error,
           status,
         }: HandlerContext) => {
+          // 需要接受一次合法性检验才能开始发送
           if (verified) {
             return;
           }
-          // 需要接受一次合法性检验才能开始发送
-          verified = true;
           if (error) {
             reject(
               JsonResponse.fail(errcode.PROTOCOL_EXCEPTION, error.message),
@@ -397,6 +339,8 @@ export class Service implements IService {
             chunk = Buffer.concat([chunk, buffer]);
             return;
           }
+
+          verified = true;
           const { retcode, errMsg } = JSON.parse(
             chunk.toString('utf-8'),
           ) as JsonResponse;
@@ -410,9 +354,9 @@ export class Service implements IService {
           // 验证通过，开始发送流程
           const startTime = +new Date();
 
-          onLaunch?.(fileInfo);
+          onLaunch?.(transferInfo);
 
-          await proxy.sendBytes(JSON.stringify(fileInfo));
+          await proxy.sendBytes(JSON.stringify(transferInfo));
           if (socketError) {
             // 假如在事件循环中出现了 Socket 错误，直接结束流程
             return;
@@ -421,7 +365,7 @@ export class Service implements IService {
           proxy.sendStream(readStream, size, {
             onDone() {
               resolve({
-                ...fileInfo,
+                ...transferInfo,
                 cost: (+new Date() - startTime) / 1000,
               });
             },
@@ -432,7 +376,7 @@ export class Service implements IService {
             },
             onProgress(percent, speed) {
               onProgress?.({
-                ...fileInfo,
+                ...transferInfo,
                 progress: percent,
                 speed,
               });
@@ -492,8 +436,11 @@ export class Service implements IService {
   // 受信 Service 列表
   private verifiedServices!: ServiceInfo[];
 
-  // 接收处理器
-  private receiveHandlers!: Set<ReceiveHandler>;
+  // 文件接收处理器
+  private receiveFileHandlers!: Set<ReceiveFileHandler>;
+
+  // 文本接收处理器
+  private receiveTextHandlers!: Set<ReceiveTextHandler>;
 
   // 初始化 Service 信息
   private initServiceInfo() {
@@ -505,7 +452,8 @@ export class Service implements IService {
     this.tcpPort = 86;
     this.availableServices = [];
     this.verifiedServices = [];
-    this.receiveHandlers = new Set();
+    this.receiveFileHandlers = new Set();
+    this.receiveTextHandlers = new Set();
   }
 
   // 初始化 TCP 服务器
@@ -535,7 +483,7 @@ export class Service implements IService {
       // 发送校验成功回包
       await proxy.sendBytes(JsonResponse.ok().toJSON());
 
-      let fileInfo: FileInfo | null = null;
+      let transferInfo: TransferInfo | null = null;
       // 上一次至今接收的字节数
       let lastReceivedBytes = 0;
       // 共接收字节数
@@ -543,6 +491,7 @@ export class Service implements IService {
       // 上一次时间戳
       let lastReceivedTime = 0;
       // 不是流式接收时需要拼接完整buffer
+      // TransferType 为 TEXT 时直接写入 Buffer
       let chunk = Buffer.alloc(0);
       // 写入流
       let writeStream: WriteStream | null = null;
@@ -555,83 +504,105 @@ export class Service implements IService {
         const { error, buffer, status, total } = context;
 
         if (error) {
-          this.receiveHandlers.forEach((handler) => {
+          this.receiveFileHandlers.forEach((handler) => {
             handler(
               {} as any,
               JsonResponse.fail(errcode.PROTOCOL_EXCEPTION, error.message),
             );
           });
-          fileInfo = null;
+          transferInfo = null;
           return;
         }
 
-        if (!fileInfo) {
+        if (!transferInfo) {
           if (status !== ProtocolStatus.DONE) {
-            // 接收FileInfo时不是流，需要完整接收JSON
+            // 接收TransferInfo时不是流，需要完整接收JSON
             chunk = Buffer.concat([chunk, buffer]);
             return;
           }
           try {
-            fileInfo = JSON.parse(chunk.toString('utf-8'));
+            transferInfo = JSON.parse(chunk.toString('utf-8'));
           } catch (err) {
             // 忽略无法解析的JSON
-            fileInfo = null;
+            transferInfo = null;
             return;
           } finally {
             chunk = Buffer.alloc(0);
           }
         }
-        if (!writePath) {
+        if (transferInfo!.type === TransferType.FILE && !writePath) {
           // batchId和时间戳附加到原始文件名
           writePath = resolve(
             this.downloadRoot,
-            `${fileInfo!.batchId}-${+new Date()}-${fileInfo!.filename}`,
+            `${transferInfo!.batchId}-${+new Date()}-${transferInfo!.filename}`,
           );
         }
-        if (!writeStream) {
+        if (transferInfo!.type === TransferType.FILE && !writeStream) {
           writeStream = createWriteStream(writePath);
         }
 
-        writeStream.write(buffer);
+        writeStream?.write(buffer);
+
+        // 接收 TEXT 时直接写入 Buffer
+        if (transferInfo!.type === TransferType.TEXT) {
+          chunk = Buffer.concat([chunk, buffer]);
+        }
 
         const done = status === ProtocolStatus.DONE;
 
-        const currentTime = +new Date();
-        if (lastReceivedTime === 0) {
-          lastReceivedTime = currentTime;
-        }
-        const gap = currentTime - lastReceivedTime;
+        if (transferInfo!.type === TransferType.FILE) {
+          // 只有接收 FILE 时需要回调 onProgress，接收 TEXT 时不需要
+          const currentTime = +new Date();
+          if (lastReceivedTime === 0) {
+            lastReceivedTime = currentTime;
+          }
+          const gap = currentTime - lastReceivedTime;
 
-        lastReceivedBytes += buffer.length;
-        receivedBytes += buffer.length;
+          lastReceivedBytes += buffer.length;
+          receivedBytes += buffer.length;
 
-        if (gap >= 1000 || done) {
-          // 超过1s或已结束，回调onProgress
-          const progress = Number(((receivedBytes / total) * 100).toFixed(2));
-          const speed = Number((lastReceivedBytes / 1000 / gap).toFixed(2));
-          this.receiveHandlers.forEach((handler) => {
-            handler({
-              ...fileInfo!,
-              batchId,
-              progress,
-              speed,
-              done,
+          if (gap >= 1000 || done) {
+            // 超过1s或已结束，回调onProgress
+            const progress = Number(((receivedBytes / total) * 100).toFixed(2));
+            const speed = Number((lastReceivedBytes / 1000 / gap).toFixed(2));
+            this.receiveFileHandlers.forEach((handler) => {
+              handler({
+                ...transferInfo!,
+                batchId,
+                progress,
+                speed,
+                done,
+              });
             });
-          });
 
-          lastReceivedBytes = 0;
+            lastReceivedBytes = 0;
+          }
         }
 
         if (done) {
           // 已经写入了最后一个buffer
-          writeStream.close();
+
+          if (transferInfo!.type === TransferType.TEXT) {
+            const text = chunk.toString('utf-8');
+
+            this.receiveTextHandlers.forEach((handler) => {
+              handler({
+                text,
+                sourceId: transferInfo!.sourceId,
+                batchId: transferInfo!.batchId,
+              });
+            });
+          }
+
+          writeStream?.close();
           // 重置状态
           writeStream = null;
-          fileInfo = null;
+          transferInfo = null;
           writePath = '';
           batchId = '';
           lastReceivedTime = 0;
           receivedBytes = 0;
+          chunk = Buffer.alloc(0);
         }
       };
 
@@ -644,7 +615,7 @@ export class Service implements IService {
       socket.on('error', () => {
         proxy.removeHandler(receiveHandler);
         if (batchId) {
-          this.receiveHandlers.forEach((handler) => {
+          this.receiveFileHandlers.forEach((handler) => {
             handler(
               {} as any,
               JsonResponse.fail(errcode.SOCKET_ERROR, 'Socket 连接错误'),
@@ -652,7 +623,7 @@ export class Service implements IService {
           });
           writeStream?.close();
           writeStream = null;
-          fileInfo = null;
+          transferInfo = null;
           writePath = '';
           batchId = '';
           lastReceivedTime = 0;
