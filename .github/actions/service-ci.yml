@@ -1,0 +1,18 @@
+name: Service CI
+desciption: Service 模块构建检测流水线
+runs:
+  using: 'composite'
+steps:
+  - name: ESLint 检查
+    run: 
+      - cd packages/local-transfer-service
+      - pnpm run lint
+  - name: 单元测试检查
+    run:
+      - cd packages/local-transfer-service
+      - pnpm run test
+  - name: 构建检查
+    run:
+      - cd packages/local-transfer-service
+      - pnpm run build
+  

@@ -1,0 +1,43 @@
+name: 构建检查流水线
+
+init: &init
+  - name: Checkout
+        uses: actions/checkout@v3
+  - name: Setup Node.js
+    uses: actions/setup-node@v3
+    with:
+      node-version: 18
+  - name: Install pnpm
+    run: npm i -g pnpm
+  - name: Install dependencies
+    run: pnpm install
+
+
+on:
+  push:
+    branches: 
+      - master
+      - release/*
+  pull_request:
+    branches:
+      - master
+      - release/*
+
+jobs:
+  - name: Service 构建检查
+    runs-on: ubuntu-latest
+    steps: 
+      *init
+      - name: Trigger Service 流水线
+        uses: ./.github/actions/service-ci.yml
+
+  - name: App 构建检查
+    runs-on: ubuntu-latest
+    steps: 
+      *init
+      - name: Trigger App 流水线
+        uses: ./.github/actions/app-ci.yml
+
+
+      
+
