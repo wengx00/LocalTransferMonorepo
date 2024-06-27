@@ -4,8 +4,13 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import icon from '../../resources/icon.png?asset';
 import makeInstance from './utils/make-instance';
 import NativeApiHelper from './helpers/NativeApiHelper';
-import ServiceApiHelper from './helpers/ServiceApiHelper';
+import ServiceApiHelper, { service } from './helpers/ServiceApiHelper';
 import namespace from '@shared/namespace';
+import { ServiceApi } from '@ipc/service';
+import registerService from './utils/register-service';
+
+// 退出时需要执行的方法
+let dispose = () => {};
 
 function createWindow(): void {
   // Create the browser window.
@@ -31,8 +36,15 @@ function createWindow(): void {
     return { action: 'deny' };
   });
 
+  // 注册 ipcMain API
   makeInstance(namespace.native, new NativeApiHelper(), mainWindow.webContents);
-  makeInstance(namespace.service, new ServiceApiHelper(), mainWindow.webContents);
+  const serviceApi = makeInstance<ServiceApi>(
+    namespace.service,
+    new ServiceApiHelper(),
+    mainWindow.webContents
+  );
+  // 注册 Service 监听事件
+  dispose = registerService(service, serviceApi);
 
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
@@ -76,6 +88,8 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
+  // 清除监听器
+  dispose();
 });
 
 // In this file you can include the rest of your app"s specific main process

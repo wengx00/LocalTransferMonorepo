@@ -16,24 +16,52 @@
           <details>
             <summary>附近设备</summary>
             <ul>
-              <li v-for="item in nearbyDevices" :key="item.devid" @click="selectNearbyDevice(item)"
-                :class="{ selected: selectedNearbyDevice.devid === item.devid }">
+              <li
+                v-for="item in nearbyDevices"
+                :key="item.devid"
+                :class="{ selected: selectedNearbyDevice.devid === item.devid }"
+                @click="selectNearbyDevice(item)"
+              >
                 <span :class="['status-circle', item.isSign ? 'online' : 'offline']"></span>
                 <div v-if="item.isSign">
-                  <img v-if="item.devtype == 'mac'" src="../../assets/image/appleAct.png" :alt="item.devtype"
-                    class="device-icon" />
-                  <img v-else-if="item.devtype == 'windows'" src="../../assets/image/windowsAct.png" :alt="item.devtype"
-                    class="device-icon" />
-                  <img v-else-if="item.devtype == 'linux'" src="../../assets/image/linuxAct.png" :alt="item.devtype"
-                    class="device-icon" />
+                  <img
+                    v-if="item.devtype == 'mac'"
+                    src="../../assets/image/appleAct.png"
+                    :alt="item.devtype"
+                    class="device-icon"
+                  />
+                  <img
+                    v-else-if="item.devtype == 'windows'"
+                    src="../../assets/image/windowsAct.png"
+                    :alt="item.devtype"
+                    class="device-icon"
+                  />
+                  <img
+                    v-else-if="item.devtype == 'linux'"
+                    src="../../assets/image/linuxAct.png"
+                    :alt="item.devtype"
+                    class="device-icon"
+                  />
                 </div>
                 <div v-if="!item.isSign">
-                  <img v-if="item.devtype == 'mac'" src="../../assets/image/apple.png" :alt="item.devtype"
-                    class="device-icon" />
-                  <img v-else-if="item.devtype == 'windows'" src="../../assets/image/windows.png" :alt="item.devtype"
-                    class="device-icon" />
-                  <img v-else-if="item.devtype == 'linux'" src="../../assets/image/linux.png" :alt="item.devtype"
-                    class="device-icon" />
+                  <img
+                    v-if="item.devtype == 'mac'"
+                    src="../../assets/image/apple.png"
+                    :alt="item.devtype"
+                    class="device-icon"
+                  />
+                  <img
+                    v-else-if="item.devtype == 'windows'"
+                    src="../../assets/image/windows.png"
+                    :alt="item.devtype"
+                    class="device-icon"
+                  />
+                  <img
+                    v-else-if="item.devtype == 'linux'"
+                    src="../../assets/image/linux.png"
+                    :alt="item.devtype"
+                    class="device-icon"
+                  />
                 </div>
 
                 <p class="device-name" :title="item.devname">{{ item.devname }}</p>
@@ -47,13 +75,19 @@
         <div class="device-status">
           <img class="computer" src="../../assets/image/File.png" alt="img" />
 
-          <p>{{ selectedDevice.isSign ? "设备在线" : "设备离线" }}</p>
+          <p>{{ selectedDevice.isSign ? '设备在线' : '设备离线' }}</p>
         </div>
         <t-button class="sendFile-button" theme="primary" @click="sendFile">发送</t-button>
       </div>
     </div>
-    <t-dialog placement="center" :visible.sync="isUploadDialogVisible" header="上传文件" width="500px"
-      @close="closeUploadDialog" confirm-btn="上传">
+    <t-dialog
+      v-model:visible="isUploadDialogVisible"
+      placement="center"
+      header="上传文件"
+      width="500px"
+      confirm-btn="上传"
+      @close="closeUploadDialog"
+    >
       <div class="root">
         <t-button @click="openFileDialog">打开文件选择框</t-button>
         <div class="row">
@@ -66,19 +100,31 @@
           </t-select>
           <t-button style="flex-shrink: 0" @click="getTargetPath">获取目标路径</t-button>
         </div>
-        <div :class="[
-        'drag-area',
-        {
-          active: dragOver
-        }
-      ]" @drop="handleDropFile" @dragover="handleDragOver" @dragleave="handleDragLeave">
+        <div
+          :class="[
+            'drag-area',
+            {
+              active: dragOver
+            }
+          ]"
+          @drop="handleDropFile"
+          @dragover="handleDragOver"
+          @dragleave="handleDragLeave"
+        >
           将文件拖拽至此
         </div>
       </div>
     </t-dialog>
 
-    <t-dialog placement="center" :visible.sync="isTextTransferDialogVisible" header="传输文本" width="500px"
-      @close="closeTextTransferDialog" confirm-btn="传输" @confirm="transferText">
+    <t-dialog
+      v-model:visible="isTextTransferDialogVisible"
+      placement="center"
+      header="传输文本"
+      width="500px"
+      confirm-btn="传输"
+      @close="closeTextTransferDialog"
+      @confirm="transferText"
+    >
       <div class="root">
         <t-textarea v-model="textToTransfer" placeholder="请输入要传输的文本"></t-textarea>
       </div>
@@ -100,21 +146,21 @@ const textToTransfer = ref('');
 
 const nearbyDevices = ref([
   {
-    devname: "想喝益力多的mac",
-    devtype: "mac",
-    devid: "123456789",
+    devname: '想喝益力多的mac',
+    devtype: 'mac',
+    devid: '123456789',
     isSign: true
   },
   {
-    devname: "pwq的Windows",
-    devtype: "windows",
-    devid: "22222222222",
+    devname: 'pwq的Windows',
+    devtype: 'windows',
+    devid: '22222222222',
     isSign: true
   },
   {
-    devname: "linux",
-    devtype: "linux",
-    devid: "222333333222",
+    devname: 'linux',
+    devtype: 'linux',
+    devid: '222333333222',
     isSign: true
   }
 ]);

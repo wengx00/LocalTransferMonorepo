@@ -1,6 +1,7 @@
 declare module '@ipc/service' {
   import {
-    ReceiveHandler,
+    ReceiveFileHandler,
+    ReceiveTextHandler,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     SendFileException,
     SendFileRequest,
@@ -31,6 +32,18 @@ declare module '@ipc/service' {
        * @param port 本地端口
        */
       setTcpPort(port: number): Promise<void>;
+
+      /**
+       * 获取 TCP 端口
+       * @returns TCP 端口
+       */
+      getTcpPort(): Promise<number>;
+
+      /**
+       * 获取下载根目录
+       * @returns 下载根目录
+       */
+      getDownloadRoot(): Promise<string>;
 
       /**
        * 设置下载根目录
@@ -84,7 +97,8 @@ declare module '@ipc/service' {
       refresh(): void;
     };
     listener: {
-      receiveFile(handler: ReceiveHandler): Promise<void>;
+      receiveFile(handler: ReceiveFileHandler): Promise<void>;
+      receiveText(handler: ReceiveTextHandler): Promise<void>;
     };
   }
 }

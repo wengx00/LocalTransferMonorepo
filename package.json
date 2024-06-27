@@ -9,7 +9,7 @@
     "changeset": "changeset",
     "version-package": "changeset version",
     "prepare": "husky install",
-    "lint": "node --max_old_space_size=8192 ./node_modules/eslint/bin/eslint.js --fix --color --cache --quiet"
+    "lint": "node --max_old_space_size=8192 ./node_modules/eslint/bin/eslint.js --fix --color --cache"
   },
   "keywords": [],
   "author": "",
@@ -22,8 +22,8 @@
     "typescript-eslint": "^7.13.0"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx,mjs,cjs}": [
-      "node --max_old_space_size=8192 ./node_modules/eslint/bin/eslint.js --fix --color --cache --quiet"
+    "*.{js,jsx,ts,tsx,mjs,cjs,vue}": [
+      "node --max_old_space_size=8192 ./node_modules/eslint/bin/eslint.js --fix --color --cache"
     ]
   },
   "dependencies": {

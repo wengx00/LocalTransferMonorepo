@@ -1,14 +1,14 @@
 <template>
   <div class="app">
     <Sidebar />
-    <t-footer class="footer">Copyright @ 2024-{{ new Date().getFullYear() }} LocalTransfer. All Rights
-      Reserved</t-footer>
+    <t-footer class="footer"
+      >Copyright @ 2024-{{ new Date().getFullYear() }} LocalTransfer. All Rights Reserved</t-footer
+    >
   </div>
 </template>
 
 <script setup lang="ts">
 import Sidebar from './Sidebar.vue';
-
 </script>
 
 <style scoped>

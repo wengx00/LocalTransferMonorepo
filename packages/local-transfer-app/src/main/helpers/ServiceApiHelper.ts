@@ -2,7 +2,7 @@ import { ServiceApi } from '@ipc/service';
 import { Service } from 'local-transfer-service';
 import NativeApiHelper from './NativeApiHelper';
 
-const service = new Service({
+export const service = new Service({
   downloadRoot: new NativeApiHelper().handler.getPath('downloads') as any
 });
 
@@ -43,6 +43,12 @@ export default class ServiceApiHelper implements IpcMainHelper<ServiceApi> {
     },
     sendFile(request) {
       return service.sendFile(request);
+    },
+    async getTcpPort() {
+      return service.getTcpPort();
+    },
+    async getDownloadRoot() {
+      return service.getDownloadRoot();
     }
   };
 }
