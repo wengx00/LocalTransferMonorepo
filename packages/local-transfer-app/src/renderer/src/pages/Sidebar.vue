@@ -1,7 +1,7 @@
 <template>
   <t-layout class="app">
     <t-aside width="240px">
-      <t-menu theme="light" v-model="selectedMenu" class="sidebar">
+      <t-menu v-model="selectedMenu" theme="light" class="sidebar">
         <template #logo>
           <div>LocalTransfer</div>
         </template>
@@ -25,7 +25,7 @@
         </t-menu-item>
       </t-menu>
     </t-aside>
-    <t-layout style="width:600px;">
+    <t-layout style="width: 600px">
       <t-header class="header">这里用于放设备状态</t-header>
       <t-content class="content">
         <component :is="currentComponent" />
@@ -45,7 +45,7 @@ const selectedMenu = ref('ReceiveFile');
 const components = {
   ReceiveFile,
   SendFile,
-  Settings,
+  Settings
 };
 
 const currentComponent = computed(() => components[selectedMenu.value]);
@@ -67,7 +67,7 @@ const currentComponent = computed(() => components[selectedMenu.value]);
   justify-content: center;
   border-bottom: 1px solid #ccc;
 }
-.text{
+.text {
   font-size: 18px;
   font-weight: 600;
 }
