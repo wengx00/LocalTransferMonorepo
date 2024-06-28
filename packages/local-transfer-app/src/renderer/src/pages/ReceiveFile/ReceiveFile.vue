@@ -1,125 +1,36 @@
 <template>
   <div class="receive-file">
     <div class="device-info">
-      <div class="current-device">
-        <p>该设备ID: {{ serviceId }}</p>
-      </div>
       <div class="recent-receive">
-        <details>
-          <summary>附近设备</summary>
-          <ul>
-            <li
-              v-for="item in nearbyDevices"
-              :key="item.devid"
-              :class="{ selected: selectedNearbyDevice.devid === item.devid }"
-              @click="selectNearbyDevice(item)"
-            >
-              <span :class="['status-circle', item.isSign ? 'online' : 'offline']"></span>
-              <div v-if="item.isSign">
-                <img
-                  v-if="item.devtype == 'mac'"
-                  src="../../assets/image/appleAct.png"
-                  :alt="item.devtype"
-                  class="device-icon"
-                />
-                <img
-                  v-else-if="item.devtype == 'windows'"
-                  src="../../assets/image/windowsAct.png"
-                  :alt="item.devtype"
-                  class="device-icon"
-                />
-                <img
-                  v-else-if="item.devtype == 'linux'"
-                  src="../../assets/image/linuxAct.png"
-                  :alt="item.devtype"
-                  class="device-icon"
-                />
-              </div>
-              <div v-if="!item.isSign">
-                <img
-                  v-if="item.devtype == 'mac'"
-                  src="../../assets/image/apple.png"
-                  :alt="item.devtype"
-                  class="device-icon"
-                />
-                <img
-                  v-else-if="item.devtype == 'windows'"
-                  src="../../assets/image/windows.png"
-                  :alt="item.devtype"
-                  class="device-icon"
-                />
-                <img
-                  v-else-if="item.devtype == 'linux'"
-                  src="../../assets/image/linux.png"
-                  :alt="item.devtype"
-                  class="device-icon"
-                />
-              </div>
-              <p class="device-name" :title="item.devname">{{ item.devname }}</p>
-            </li>
-          </ul>
-        </details>
-      </div>
-      <div class="recent-receive">
-        <details>
-          <summary>最近接收</summary>
-          <ul>
-            <li
-              v-for="item in recentDevices"
-              :key="item.devid"
-              :class="{ selected: selectedRecentDevice.devid === item.devid }"
-              @click="selectRecentDevice(item)"
-            >
-              <span :class="['status-circle', item.isSign ? 'online' : 'offline']"></span>
-              <div v-if="item.isSign">
-                <img
-                  v-if="item.devtype == 'mac'"
-                  src="../../assets/image/appleAct.png"
-                  :alt="item.devtype"
-                  class="device-icon"
-                />
-                <img
-                  v-else-if="item.devtype == 'windows'"
-                  src="../../assets/image/windowsAct.png"
-                  :alt="item.devtype"
-                  class="device-icon"
-                />
-                <img
-                  v-else-if="item.devtype == 'linux'"
-                  src="../../assets/image/linuxAct.png"
-                  :alt="item.devtype"
-                  class="device-icon"
-                />
-              </div>
-              <div v-if="!item.isSign">
-                <img
-                  v-if="item.devtype == 'mac'"
-                  src="../../assets/image/apple.png"
-                  :alt="item.devtype"
-                  class="device-icon"
-                />
-                <img
-                  v-else-if="item.devtype == 'windows'"
-                  src="../../assets/image/windows.png"
-                  :alt="item.devtype"
-                  class="device-icon"
-                />
-                <img
-                  v-else-if="item.devtype == 'linux'"
-                  src="../../assets/image/linux.png"
-                  :alt="item.devtype"
-                  class="device-icon"
-                />
-              </div>
-
-              <p class="device-name" :title="item.devname">{{ item.devname }}</p>
-            </li>
-          </ul>
-        </details>
+        <div class="refresh-button">
+          <p>附近设备</p>
+          <img
+            :class="refreshing ? 'refresh rotate' : 'notRefresh'"
+            :src="refreshAct"
+            @click="refreshNearbyDevices"
+          />
+        </div>
+        <ul>
+          <li
+            v-for="item in nearbyDevices"
+            :key="item.devid"
+            :class="{ selected: selectedNearbyDevice.devid === item.devid }"
+            @click="selectNearbyDevice(item)"
+          >
+            <span :class="['status-circle', item.isSign ? 'online' : 'offline']"></span>
+            <img class="device-icon" :src="getImage(item)" :alt="item.devtype" />
+            <p class="device-name" :title="item.devname">{{ item.devname }}</p>
+            <div :class="item.deviceTrust ? 'deviceTrust' : 'deviceNotTrust'">
+              {{ item.deviceTrust ? '已信任' : '未信任' }}
+            </div>
+          </li>
+        </ul>
       </div>
     </div>
     <div class="device-detail">
-      <p>{{ selectedDevice.devname }}</p>
+      <div class="deviceInfo">
+        <p class="device-detail-name">{{ selectedDevice.devname }}</p>
+      </div>
       <div class="device-status">
         <img
           v-if="selectedDevice.isSign"
@@ -135,62 +46,86 @@
         />
         <p>{{ selectedDevice.isSign ? '设备在线' : '设备离线' }}</p>
       </div>
-      <button class="receive-button">接收文件</button>
+      <t-col class="sendFile-button">
+        <button class="receive-button" @click="trustDevice">
+          {{ selectedDevice.deviceTrust ? '解除信任' : '信任设备' }}
+        </button>
+        <button
+          :class="selectedDevice.deviceTrust ? 'receive-button' : 'button-NotTrust'"
+          :disabled="!selectedDevice.deviceTrust"
+          :title="selectedDevice.deviceTrust ? '' : '请先信任设备'"
+        >
+          接收文件
+        </button>
+      </t-col>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import serviceApi from '@renderer/apis/service';
+import { ref } from 'vue';
+import macAct from '../../assets/image/macAct.png';
+import mac from '../../assets/image/mac.png';
+import windows from '../../assets/image/windows.png';
+import windowsAct from '../../assets/image/windowsAct.png';
+import linuxAct from '../../assets/image/linuxAct.png';
+import linux from '../../assets/image/linux.png';
+import refreshAct from '../../assets/image/refreshAct.png';
 
-const serviceId = ref('');
-const serviceName = ref('');
+const images = {
+  macAct,
+  mac,
+  windows,
+  windowsAct,
+  linuxAct,
+  linux
+};
+const getImage = (item) => {
+  if (item.isSign) {
+    return images[`${item.devtype}Act`];
+  }
+  return images[item.devtype];
+};
 
 const nearbyDevices = ref([
   {
     devname: '想喝益力多的mac',
     devtype: 'mac',
     devid: '123456789',
-    isSign: true
+    isSign: true,
+    deviceTrust: true
   },
   {
     devname: 'pwq的Windows',
     devtype: 'windows',
     devid: '22222222222',
-    isSign: true
+    isSign: true,
+    deviceTrust: true
   },
   {
     devname: 'linux',
     devtype: 'linux',
     devid: '222122',
-    isSign: true
-  }
-]);
-
-const recentDevices = ref([
-  {
-    devname: '想喝益力多的mac',
-    devtype: 'mac',
-    devid: '123456789',
-    isSign: true
+    isSign: true,
+    deviceTrust: false
   },
   {
-    devname: 'pwq的Windows',
+    devname: '不知道',
     devtype: 'windows',
-    devid: '22222222222',
-    isSign: false
+    devid: '2222872222222',
+    isSign: false,
+    deviceTrust: true
   },
   {
-    devname: 'linux',
+    devname: '未知',
     devtype: 'linux',
-    devid: '222332322',
-    isSign: false
+    devid: '2223732322',
+    isSign: false,
+    deviceTrust: true
   }
 ]);
 
 const selectedNearbyDevice = ref(nearbyDevices.value[0]);
-const selectedRecentDevice = ref(recentDevices.value[0]);
 const selectedDevice = ref(selectedNearbyDevice.value);
 
 const selectNearbyDevice = (device) => {
@@ -198,19 +133,20 @@ const selectNearbyDevice = (device) => {
   selectedDevice.value = device;
 };
 
-const selectRecentDevice = (device) => {
-  selectedRecentDevice.value = device;
-  selectedDevice.value = device;
+const trustDevice = () => {
+  selectedDevice.value.deviceTrust = !selectedDevice.value.deviceTrust;
 };
 
-async function getServiceName() {
-  serviceName.value = await serviceApi.invoke.getName();
-}
+const refreshing = ref(false);
 
-onMounted(async () => {
-  serviceId.value = await serviceApi.invoke.getId();
-  getServiceName();
-});
+const refreshNearbyDevices = async () => {
+  refreshing.value = true;
+  // 调用接口或重新获取附近设备列表的数据
+  // 这里假设需要等待一段时间来模拟异步操作
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  console.log('refresh nearby devices');
+  refreshing.value = false; // 停止旋转
+};
 </script>
 
 <style scoped>
@@ -227,12 +163,6 @@ onMounted(async () => {
   flex-direction: column;
 }
 
-.current-device {
-  font-size: 18px;
-  font-weight: 700;
-}
-
-.current-device,
 .recent-receive {
   margin-bottom: 20px;
 }
@@ -271,6 +201,78 @@ onMounted(async () => {
   font-size: 18px;
 }
 
+.refresh-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.notRefresh,
+.refresh {
+  width: 20px;
+  height: 20px;
+  margin-right: 10px;
+}
+
+.refresh {
+  transition: transform 2s ease-out;
+}
+
+.rotate {
+  animation: rotate 2s linear infinite;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(1080deg);
+  }
+}
+
+.refresh-button p {
+  font-weight: 700;
+}
+
+.device-detail-name {
+  width: calc(100%-10px);
+}
+
+.deviceInfo {
+  display: flex;
+  justify-content: space-between;
+}
+
+.deviceTrust,
+.deviceNotTrust {
+  min-width: 5rem;
+  height: 3rem;
+  margin-left: auto;
+  padding: 3px 10px;
+  font-size: 1.2rem;
+  border-radius: 5px;
+}
+
+.deviceTrust,
+.deviceNotTrust {
+  background-color: #366ef4;
+  color: #ffffff;
+  transition:
+    width 0.4s,
+    background-color 0.4s;
+}
+
+.deviceTrust:hover {
+  background-color: #0052d9;
+}
+
+.deviceNotTrust {
+  background-color: #d3d3d3;
+  color: #000000;
+}
+
 .device-status {
   display: flex;
   align-items: center;
@@ -291,7 +293,7 @@ onMounted(async () => {
 }
 
 .device-name {
-  width: 70%;
+  width: 45%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -302,13 +304,19 @@ onMounted(async () => {
   height: auto;
 }
 
+.sendFile-button {
+  display: flex;
+  width: 100%;
+  justify-content: space-around;
+  font-size: 16px;
+}
+
 .receive-button {
-  width: 30%;
-  margin-left: 35%;
+  width: 35%;
   padding: 10px 20px;
   border: 1px solid #ccc;
   border-radius: 8px;
-  background-color: #0052d9;
+  background-color: #366ef4;
   color: white;
   border: none;
   cursor: pointer;
@@ -321,7 +329,7 @@ onMounted(async () => {
 }
 
 .receive-button:hover {
-  background-color: #0052d9;
+  background-color: #366ef4;
   color: white;
 }
 
@@ -332,13 +340,28 @@ onMounted(async () => {
   position: absolute;
   top: 0;
   left: 0;
-  background-color: #366ef4;
+  background-color: #0052d9;
   z-index: -1;
   transition: width 0.4s;
 }
 
 .receive-button:hover:before {
   width: 100%;
+}
+
+.button-NotTrust {
+  content: '请先信任设备';
+  width: 30%;
+  padding: 10px 20px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background-color: #d3d3d3;
+  color: rgb(0, 0, 0);
+  border: none;
+  cursor: not-allowed;
+  position: relative;
+  overflow: hidden;
+  z-index: 0;
 }
 
 .status-circle {
