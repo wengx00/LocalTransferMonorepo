@@ -26,6 +26,7 @@ import JsonResponse from '../utils/json-response';
 import {
   ReceiveFileHandler,
   ReceiveTextHandler,
+  AvailableServiceUpdateHandler,
   SendFileRequest,
   SendFileResult,
   SendTextRequest,
@@ -75,6 +76,14 @@ export interface IService {
   removeReceiveTextHandler(handler: ReceiveTextHandler): void;
   // 发送文本
   sendText(request: SendTextRequest): Promise<SendTextResult>;
+  // 注册可用服务更新监听器
+  addAvailableServicesUpdateHandler(
+    handler: AvailableServiceUpdateHandler,
+  ): void;
+  // 删除可用服务更新监听器
+  removeAvailableServicesUpdateHandler(
+    handler: AvailableServiceUpdateHandler,
+  ): void;
 }
 
 /**
@@ -93,6 +102,18 @@ export class Service implements IService {
     this.initServiceInfo();
     this.initTcpServer();
     this.initUdpSocket();
+  }
+
+  addAvailableServicesUpdateHandler(
+    handler: AvailableServiceUpdateHandler,
+  ): void {
+    this.availableServicesUpdateHandlers.add(handler);
+  }
+
+  removeAvailableServicesUpdateHandler(
+    handler: AvailableServiceUpdateHandler,
+  ): void {
+    this.availableServicesUpdateHandlers.delete(handler);
   }
 
   removeReceiveTextHandler(handler: ReceiveTextHandler): void {
@@ -442,6 +463,9 @@ export class Service implements IService {
   // 文本接收处理器
   private receiveTextHandlers!: Set<ReceiveTextHandler>;
 
+  // 可用服务变更处理器
+  private availableServicesUpdateHandlers!: Set<AvailableServiceUpdateHandler>;
+
   // 初始化 Service 信息
   private initServiceInfo() {
     // 8 位 nanoid，为了达到至少一次碰撞的 1% 概率，需要约 99 天或 200 万个 ID
@@ -686,6 +710,9 @@ export class Service implements IService {
               );
               if (!target) {
                 this.availableServices.push(info);
+                this.availableServicesUpdateHandlers.forEach((handler) => {
+                  handler();
+                });
               }
             }
             break;
@@ -694,6 +721,9 @@ export class Service implements IService {
             this.availableServices = this.availableServices.filter(
               ({ ip }) => ip !== rinfo.address,
             );
+            this.availableServicesUpdateHandlers.forEach((handler) => {
+              handler();
+            });
             this.verifiedServices = this.verifiedServices.filter(
               ({ ip }) => ip !== rinfo.address,
             );
@@ -710,6 +740,9 @@ export class Service implements IService {
             );
             if (!target) {
               this.availableServices.push(info);
+              this.availableServicesUpdateHandlers.forEach((handler) => {
+                handler();
+              });
             } else {
               // 使用引用更新一波已有的记录
               target.ip = info.ip;

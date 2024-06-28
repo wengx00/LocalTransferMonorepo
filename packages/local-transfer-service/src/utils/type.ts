@@ -86,6 +86,9 @@ export type ReceiveTextHandler = (context: {
   sourceId: string;
 }) => any;
 
+// 可用服务更新回调函数
+export type AvailableServiceUpdateHandler = () => void;
+
 export enum TransferType {
   FILE = 1,
   TEXT = 2,
