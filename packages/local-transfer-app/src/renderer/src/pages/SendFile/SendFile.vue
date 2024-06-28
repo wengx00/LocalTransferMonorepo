@@ -1,148 +1,108 @@
 <template>
   <div class="send-file">
     <div class="transfer">
-      <t-button theme="primary" class="transfer-button" @click="openUploadDialog">
+      <t-button theme="primary" class="transfer-button" @click="showUploadFileDialog">
         <template #icon><cloud-upload-icon /></template>
         上传文件
       </t-button>
-      <t-button theme="primary" class="transfer-button" @click="openTextTransferDialog">
+      <t-button theme="primary" class="transfer-button" @click="showTransferTextDialog">
         <template #icon><cloud-upload-icon /></template>
         上传文本
       </t-button>
     </div>
     <div class="receive-file">
       <div class="device-info">
+        附近设备
         <div class="recent-receive">
-          <details>
-            <summary>附近设备</summary>
+          <t-checkbox-group v-model="selectedDevices">
             <ul>
               <li
                 v-for="item in nearbyDevices"
                 :key="item.devid"
-                :class="{ selected: selectedNearbyDevice.devid === item.devid }"
-                @click="selectNearbyDevice(item)"
+                :class="{ selected: selectedDevices.includes(item.devid) }"
               >
-                <span :class="['status-circle', item.isSign ? 'online' : 'offline']"></span>
-                <div v-if="item.isSign">
-                  <img
-                    v-if="item.devtype == 'mac'"
-                    src="../../assets/image/appleAct.png"
-                    :alt="item.devtype"
-                    class="device-icon"
-                  />
-                  <img
-                    v-else-if="item.devtype == 'windows'"
-                    src="../../assets/image/windowsAct.png"
-                    :alt="item.devtype"
-                    class="device-icon"
-                  />
-                  <img
-                    v-else-if="item.devtype == 'linux'"
-                    src="../../assets/image/linuxAct.png"
-                    :alt="item.devtype"
-                    class="device-icon"
-                  />
-                </div>
-                <div v-if="!item.isSign">
-                  <img
-                    v-if="item.devtype == 'mac'"
-                    src="../../assets/image/apple.png"
-                    :alt="item.devtype"
-                    class="device-icon"
-                  />
-                  <img
-                    v-else-if="item.devtype == 'windows'"
-                    src="../../assets/image/windows.png"
-                    :alt="item.devtype"
-                    class="device-icon"
-                  />
-                  <img
-                    v-else-if="item.devtype == 'linux'"
-                    src="../../assets/image/linux.png"
-                    :alt="item.devtype"
-                    class="device-icon"
-                  />
-                </div>
-
-                <p class="device-name" :title="item.devname">{{ item.devname }}</p>
+                <t-checkbox :value="item.devid">
+                  <div style="display: flex">
+                    <img class="device-icon" :src="getImage(item)" :alt="item.devtype" />
+                    <p class="device-name" :title="item.devname">{{ item.devname }}</p>
+                  </div>
+                </t-checkbox>
               </li>
             </ul>
-          </details>
+          </t-checkbox-group>
         </div>
       </div>
-      <div class="device-detail">
-        <p>{{ selectedDevice.devname }}</p>
-        <div class="device-status">
-          <img class="computer" src="../../assets/image/File.png" alt="img" />
 
-          <p>{{ selectedDevice.isSign ? '设备在线' : '设备离线' }}</p>
+      <div class="device-detail">
+        <div v-if="isUploadFileDialogVisible" class="root">
+          <div
+            :class="[
+              'drag-area',
+              {
+                active: dragOver
+              }
+            ]"
+            @drop="handleDropFile"
+            @dragover="handleDragOver"
+            @dragleave="handleDragLeave"
+          >
+            将文件拖拽至此
+          </div>
+          <t-col class="sendFile-button">
+            <t-button @click="openFileDialog">打开文件选择框</t-button>
+            <t-button theme="primary" @click="sendFile">发送</t-button>
+          </t-col>
         </div>
-        <t-button class="sendFile-button" theme="primary" @click="sendFile">发送</t-button>
+
+        <div v-if="isTransferTextDialogVisible" class="root">
+          <t-textarea
+            v-model="textToTransfer"
+            class="textareaBox"
+            placeholder="请输入要传输的文本"
+            :maxlength="5000"
+          />
+          <t-col class="sendFile-button" :offset="9">
+            <t-button theme="primary" @click="transferText">发送</t-button>
+          </t-col>
+        </div>
       </div>
     </div>
-    <t-dialog
-      v-model:visible="isUploadDialogVisible"
-      placement="center"
-      header="上传文件"
-      width="500px"
-      confirm-btn="上传"
-      @close="closeUploadDialog"
-    >
-      <div class="root">
-        <t-button @click="openFileDialog">打开文件选择框</t-button>
-        <div class="row">
-          <t-select v-model="pathType" placeholder="选择目录类型">
-            <t-option key="downloads" value="downloads" label="下载目录" />
-            <t-option key="desktop" value="desktop" label="桌面" />
-            <t-option key="home" value="home" label="用户目录" />
-            <t-option key="exe" value="exe" label="当前可执行目录" />
-            <t-option key="temp" value="temp" label="临时目录" />
-          </t-select>
-          <t-button style="flex-shrink: 0" @click="getTargetPath">获取目标路径</t-button>
-        </div>
-        <div
-          :class="[
-            'drag-area',
-            {
-              active: dragOver
-            }
-          ]"
-          @drop="handleDropFile"
-          @dragover="handleDragOver"
-          @dragleave="handleDragLeave"
-        >
-          将文件拖拽至此
-        </div>
-      </div>
-    </t-dialog>
-
-    <t-dialog
-      v-model:visible="isTextTransferDialogVisible"
-      placement="center"
-      header="传输文本"
-      width="500px"
-      confirm-btn="传输"
-      @close="closeTextTransferDialog"
-      @confirm="transferText"
-    >
-      <div class="root">
-        <t-textarea v-model="textToTransfer" placeholder="请输入要传输的文本"></t-textarea>
-      </div>
-    </t-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { PathType } from '@ipc/native';
+import { ref, onMounted } from 'vue';
 import nativeApi from '@renderer/apis/native';
 import interact from '@renderer/utils/interact';
 
-const pathType = ref('');
+import macAct from '../../assets/image/macAct.png';
+import mac from '../../assets/image/mac.png';
+import windows from '../../assets/image/windows.png';
+import windowsAct from '../../assets/image/windowsAct.png';
+import linuxAct from '../../assets/image/linuxAct.png';
+import linux from '../../assets/image/linux.png';
+
+const images = {
+  macAct,
+  mac,
+  windows,
+  windowsAct,
+  linuxAct,
+  linux
+};
+const getImage = (item) => {
+  if (item.isSign) {
+    return images[`${item.devtype}Act`];
+  }
+  return images[item.devtype];
+};
+
 const dragOver = ref(false);
-const isUploadDialogVisible = ref(false);
-const isTextTransferDialogVisible = ref(false);
+const isUploadFileDialogVisible = ref(false);
+const isTransferTextDialogVisible = ref(false);
 const textToTransfer = ref('');
+const selectedFilePaths = ref<string[]>([]);
+const selectedDevices = ref<string[]>([]);
 
 const nearbyDevices = ref([
   {
@@ -164,28 +124,19 @@ const nearbyDevices = ref([
     isSign: true
   }
 ]);
-const selectedNearbyDevice = ref(nearbyDevices.value[0]);
-const selectedDevice = ref(selectedNearbyDevice.value);
-const selectNearbyDevice = (device) => {
-  selectedNearbyDevice.value = device;
-  selectedDevice.value = device;
+
+const showUploadFileDialog = () => {
+  isUploadFileDialogVisible.value = true;
+  isTransferTextDialogVisible.value = false;
 };
 
-const openUploadDialog = () => {
-  isUploadDialogVisible.value = true;
+const showTransferTextDialog = () => {
+  isUploadFileDialogVisible.value = false;
+  isTransferTextDialogVisible.value = true;
 };
-
-const closeUploadDialog = () => {
-  isUploadDialogVisible.value = false;
-};
-
-const openTextTransferDialog = () => {
-  isTextTransferDialogVisible.value = true;
-};
-
-const closeTextTransferDialog = () => {
-  isTextTransferDialogVisible.value = false;
-};
+onMounted(() => {
+  showUploadFileDialog();
+});
 
 // 打开文件选择框
 async function openFileDialog() {
@@ -199,7 +150,9 @@ async function openFileDialog() {
       }
     ],
     properties: {
-      openFile: true
+      openFile: true,
+      openDirectory: true,
+      multiSelections: true
     }
   });
 
@@ -207,25 +160,12 @@ async function openFileDialog() {
     interact.message.warning('用户取消选择');
     return;
   }
-  interact.message.warning('未选择任何文件');
-}
 
-// 获取目标目录路径
-async function getTargetPath() {
-  if (!pathType.value) {
-    interact.message.error('请选择目录类型');
-    return;
-  }
-
-  try {
-    const path = await nativeApi.invoke.getPath(pathType.value as PathType);
-    interact.dialog({
-      title: '目标路径',
-      content: path
-    });
-  } catch (err) {
-    console.log(err);
-    interact.message.error(String(err));
+  selectedFilePaths.value = result || [];
+  if (selectedFilePaths.value.length === 0) {
+    interact.message.warning('未选择任何文件');
+  } else {
+    interact.message.success('文件选择成功');
   }
 }
 
@@ -269,19 +209,34 @@ function handleDragLeave() {
 
 // 传输文本
 function transferText() {
+  if (selectedDevices.value.length === 0) {
+    interact.message.error('请选择一个设备');
+    return;
+  }
+
   if (!textToTransfer.value.trim()) {
     interact.message.error('未输入任何文本');
+    return;
   } else {
     interact.message.success('文本传输成功');
-    closeTextTransferDialog();
   }
 }
 
 // 发送文件
 function sendFile() {
+  if (selectedDevices.value.length === 0) {
+    interact.message.error('请选择一个设备');
+    return;
+  }
+
+  if (selectedFilePaths.value.length === 0) {
+    interact.message.error('未选择任何文件');
+    return;
+  }
+
   interact.notify.success({
     title: '发送文件',
-    content: `文件发送成功到设备：${selectedDevice.value.devname}`
+    content: `文件发送成功到设备：${selectedDevices.value.join(', ')}`
   });
 }
 </script>
@@ -293,8 +248,9 @@ function sendFile() {
 }
 
 .sendFile-button {
-  width: 50%;
-  margin-left: 25%;
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
   font-size: 16px;
 }
 
@@ -328,6 +284,15 @@ function sendFile() {
 .device-icon {
   width: 20px;
   height: 20px;
+  margin-right: 5px;
+}
+
+.device-name {
+  width: calc(100% - 25px);
+  max-width: 250px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .recent-receive {
@@ -359,7 +324,7 @@ function sendFile() {
   gap: 10px;
   margin: 10px 0;
   cursor: pointer;
-  padding: 5px;
+  padding: 5px 25px 5px 10px;
 }
 
 .recent-receive li:hover,
@@ -421,8 +386,7 @@ function sendFile() {
     justify-content: center;
     align-items: center;
     width: 100%;
-    height: 200px;
-    /* 设置更高的高度 */
+    height: 300px;
     border: 2px dashed var(--td-gray-color-7);
     color: var(--td-gray-color-7);
     border-radius: 8px;
@@ -432,6 +396,16 @@ function sendFile() {
       border: 2px dashed var(--td-brand-color);
       color: var(--td-brand-color);
     }
+  }
+
+  .t-textarea__inner {
+    display: flex;
+    width: 100%;
+    height: 300px;
+  }
+
+  .textareaBox {
+    height: 300px;
   }
 }
 </style>
