@@ -277,7 +277,7 @@ export class Service implements IService {
   }
 
   addVerifiedDevice(id: string): ServiceInfo[] {
-    const target = this.verifiedServices.find(
+    const target = this.availableServices.find(
       ({ id: targetId }) => id === targetId,
     );
     if (!target) {
