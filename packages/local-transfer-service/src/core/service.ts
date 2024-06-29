@@ -319,19 +319,22 @@ export class Service implements IService {
 
       const { ip: host, port } = target;
 
-      stat(path).then(({ size, isFile }) => {
-        if (!isFile()) {
+      stat(path).then((res) => {
+        const { size } = res;
+        if (!res.isFile()) {
           reject(JsonResponse.fail(errcode.BAD_REQUEST, '目标路径不是文件'));
           return;
         }
         // 先发送 TransferInfo
         const transferInfo: TransferInfo = {
-          filename: path.split(divider).pop()!,
-          size,
           batchId,
+          filename: path.split(divider).pop()!,
+          size: res.size,
           type: TransferType.FILE,
           sourceId: this.id,
         };
+
+        console.log('transferInfo', transferInfo);
 
         const socket = createConnection({
           port,
@@ -363,7 +366,7 @@ export class Service implements IService {
             chunk = Buffer.concat([chunk, buffer]);
             return;
           }
-
+          console.log('合法性检查通过');
           verified = true;
           const { retcode, errMsg } = JSON.parse(
             chunk.toString('utf-8'),
@@ -509,7 +512,9 @@ export class Service implements IService {
       }
 
       // 发送校验成功回包
-      await proxy.sendBytes(JsonResponse.ok().toJSON());
+      socket.on('ready', () => {
+        proxy.sendBytes(JsonResponse.ok().toJSON());
+      });
 
       let transferInfo: TransferInfo | null = null;
       // 上一次至今接收的字节数

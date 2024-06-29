@@ -1,3 +1,5 @@
+import { resolve } from 'path';
+
 import { Service } from 'local-transfer-service';
 
 const service = new Service({
@@ -19,8 +21,10 @@ service.addAvailableServicesUpdateHandler(() => {
 setTimeout(() => {
   const currentAvailableServices = service.getAvailableServices();
   console.log('Current available services: ', currentAvailableServices);
+  const targetPath = resolve(__dirname, './package.json');
+  console.log(targetPath);
   const task = service.sendFile({
-    path: './package.json',
+    path: targetPath,
     targetId: currentAvailableServices[0].id,
     onLaunch(context) {
       console.log('onLaunch: ', context);
@@ -36,4 +40,4 @@ setTimeout(() => {
     .catch((err) => {
       console.log('传输失败', err);
     });
-}, 10000);
+}, 2000);
