@@ -1,13 +1,25 @@
 {
   "name": "cmd-test",
+  "type": "module",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "index.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "ts-node index.ts"
+    "test": "pnpm build && node ./dist/index.cjs",
+    "dev": "ts-node index",
+    "build": "rollup --config rollup.config.js"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "local-transfer-service": "workspace:^"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^26.0.1",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^11.1.6"
+  }
 }
