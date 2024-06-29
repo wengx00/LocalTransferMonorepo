@@ -16,7 +16,7 @@ export const useAppConfig = defineStore('app-config', () => {
   // 是否展开Menu
   const expandMenu = ref(true);
   // Menu的当前值
-  const currentMenuValue = ref();
+  const currentMenuValue = ref<string>('');
 
   // 更新窗口大小
   function updateWindowSize() {
