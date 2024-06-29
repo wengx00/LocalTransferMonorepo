@@ -102,6 +102,8 @@ export class Service implements IService {
     this.initServiceInfo();
     this.initTcpServer();
     this.initUdpSocket();
+    // 启动服务时刷新一次可用列表
+    this.refresh();
   }
 
   addAvailableServicesUpdateHandler(
@@ -674,6 +676,8 @@ export class Service implements IService {
       if (localIp === rinfo.address) {
         return;
       }
+
+      console.log(`UDP Socket received from ${rinfo.address}:${rinfo.port}`);
 
       try {
         // 解析JSON失败会被捕获
