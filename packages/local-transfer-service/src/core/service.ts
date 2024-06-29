@@ -706,6 +706,8 @@ export class Service implements IService {
                   port: this.tcpPort,
                 },
               }).toJSON(),
+              rinfo.port,
+              rinfo.address,
             );
             if (info) {
               // 将该 Service 作为可用来源
