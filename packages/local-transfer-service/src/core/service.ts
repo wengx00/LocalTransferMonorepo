@@ -480,6 +480,7 @@ export class Service implements IService {
     this.verifiedServices = [];
     this.receiveFileHandlers = new Set();
     this.receiveTextHandlers = new Set();
+    this.availableServicesUpdateHandlers = new Set();
   }
 
   // 初始化 TCP 服务器
