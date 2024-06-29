@@ -20,6 +20,19 @@
       </t-select>
       <t-button style="flex-shrink: 0" @click="getTargetPath">获取目标路径</t-button>
     </div>
+    <div
+      :class="[
+        'drag-area',
+        {
+          active: dragOver
+        }
+      ]"
+      @drop="handleDropFile"
+      @dragover="handleDragOver"
+      @dragleave="handleDragLeave"
+    >
+      将文件拖拽至此
+    </div>
   </div>
 </template>
 
@@ -34,6 +47,7 @@ import { ref } from 'vue';
 const pathType = ref('');
 const serviceId = ref('');
 const serviceName = ref('');
+const dragOver = ref(false);
 
 // 打开文件选择框
 async function openFileDialog() {
@@ -103,6 +117,41 @@ async function getServiceName() {
   serviceName.value = await serviceApi.invoke.getName();
 }
 
+// 文件拖到面板放下
+function handleDropFile(e: DragEvent) {
+  e.preventDefault();
+  e.stopImmediatePropagation();
+
+  dragOver.value = false;
+
+  const files = e.dataTransfer?.files ?? [];
+
+  const fileList: string[] = [];
+
+  for (const file of files) {
+    fileList.push(file.path);
+  }
+
+  console.log('拖拽文件路径', fileList);
+
+  interact.notify.success({
+    title: '文件拖拽',
+    content: `文件拖拽成功，路径：${fileList.join(', ')}`
+  });
+}
+
+// 文件拖入面板
+function handleDragOver(e: DragEvent) {
+  e.preventDefault();
+  e.stopPropagation();
+  dragOver.value = true;
+}
+
+// 文件拖出面板
+function handleDragLeave() {
+  dragOver.value = false;
+}
+
 onMounted(async () => {
   serviceId.value = await serviceApi.invoke.getId();
   getServiceName();
@@ -116,6 +165,10 @@ onMounted(async () => {
   @include padding();
   gap: 1.2rem;
 
+  button {
+    flex-shrink: 0;
+  }
+
   overflow-x: hidden;
   overflow-y: auto;
 
@@ -124,6 +177,22 @@ onMounted(async () => {
     width: 100%;
 
     gap: 0.6rem;
+  }
+
+  .drag-area {
+    @include flex(column, center, center);
+    width: 100%;
+    flex: 1 0;
+
+    border: 2px dashed var(--td-gray-color-7);
+    color: var(--td-gray-color-7);
+    border-radius: 8px;
+    transition: all 0.25s;
+
+    &.active {
+      border: 2px dashed var(--td-brand-color);
+      color: var(--td-brand-color);
+    }
   }
 }
 </style>
