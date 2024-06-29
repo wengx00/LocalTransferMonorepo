@@ -101,9 +101,10 @@ export class Service implements IService {
     this.downloadRoot = downloadRoot;
     this.initServiceInfo();
     this.initTcpServer();
-    this.initUdpSocket();
-    // 启动服务时刷新一次可用列表
-    this.refresh();
+    this.initUdpSocket().then(() => {
+      // 启动服务时刷新一次可用列表
+      this.refresh();
+    });
   }
 
   addAvailableServicesUpdateHandler(
@@ -671,47 +672,78 @@ export class Service implements IService {
 
   // 初始化 UDP Socket
   private initUdpSocket() {
-    const udpHandler = (buffer: Buffer, rinfo: RemoteInfo) => {
-      // 忽略本机 IP 的发包
-      const localIp = ip.address('public', 'ipv4');
-      if (localIp === rinfo.address) {
-        return;
-      }
-
-      console.log(`UDP Socket received from ${rinfo.address}:${rinfo.port}`);
-
-      try {
-        // 解析JSON失败会被捕获
-        const message: JsonResponse = JSON.parse(buffer.toString('utf-8'));
-        const { retcode, data, errMsg } = message;
-        const { type, info } = data as {
-          type?: UdpMessage;
-          info?: ServiceInfo;
-        };
-
-        if (retcode !== 0 || errMsg) {
-          // 有错误的回包直接丢弃
+    return new Promise<void>((resolve) => {
+      const udpHandler = (buffer: Buffer, rinfo: RemoteInfo) => {
+        // 忽略本机 IP 的发包
+        const localIp = ip.address('public', 'ipv4');
+        if (localIp === rinfo.address) {
           return;
         }
 
-        switch (type) {
-          case UdpMessage.SEARCH_FOR_AVAILABLE_SERVICE:
-            // 有 Service 在寻找其他可用 Service，回包
-            this.udpSocket.send(
-              JsonResponse.ok({
-                type: UdpMessage.TELL_AVAILABLE_SERVICE,
-                info: {
-                  id: this.id,
-                  name: this.name,
-                  ip: localIp,
-                  port: this.tcpPort,
-                },
-              }).toJSON(),
-              rinfo.port,
-              rinfo.address,
-            );
-            if (info) {
-              // 将该 Service 作为可用来源
+        console.log(`UDP Socket received from ${rinfo.address}:${rinfo.port}`);
+
+        try {
+          // 解析JSON失败会被捕获
+          const message: JsonResponse = JSON.parse(buffer.toString('utf-8'));
+          const { retcode, data, errMsg } = message;
+          const { type, info } = data as {
+            type?: UdpMessage;
+            info?: ServiceInfo;
+          };
+
+          if (retcode !== 0 || errMsg) {
+            // 有错误的回包直接丢弃
+            return;
+          }
+
+          switch (type) {
+            case UdpMessage.SEARCH_FOR_AVAILABLE_SERVICE:
+              // 有 Service 在寻找其他可用 Service，回包
+              this.udpSocket.send(
+                JsonResponse.ok({
+                  type: UdpMessage.TELL_AVAILABLE_SERVICE,
+                  info: {
+                    id: this.id,
+                    name: this.name,
+                    ip: localIp,
+                    port: this.tcpPort,
+                  },
+                }).toJSON(),
+                rinfo.port,
+                rinfo.address,
+              );
+              if (info) {
+                // 将该 Service 作为可用来源
+                const target = this.availableServices.find(
+                  ({ id }) => id === info.id,
+                );
+                if (!target) {
+                  this.availableServices.push(info);
+                  this.availableServicesUpdateHandlers.forEach((handler) => {
+                    handler();
+                  });
+                }
+              }
+              break;
+            case UdpMessage.SERVICE_DEAD:
+              // 远程服务挂了，把他的可用记录删了
+              this.availableServices = this.availableServices.filter(
+                ({ ip }) => ip !== rinfo.address,
+              );
+              this.availableServicesUpdateHandlers.forEach((handler) => {
+                handler();
+              });
+              this.verifiedServices = this.verifiedServices.filter(
+                ({ ip }) => ip !== rinfo.address,
+              );
+              break;
+            case UdpMessage.TELL_AVAILABLE_SERVICE:
+              // 有新的可用 Service，添加可用记录
+              if (!info) {
+                // 无效包，丢弃
+                break;
+              }
+              // eslint-disable-next-line no-case-declarations
               const target = this.availableServices.find(
                 ({ id }) => id === info.id,
               );
@@ -720,63 +752,35 @@ export class Service implements IService {
                 this.availableServicesUpdateHandlers.forEach((handler) => {
                   handler();
                 });
+              } else {
+                // 使用引用更新一波已有的记录
+                target.ip = info.ip;
+                target.port = info.port;
+                target.name = info.name;
               }
-            }
-            break;
-          case UdpMessage.SERVICE_DEAD:
-            // 远程服务挂了，把他的可用记录删了
-            this.availableServices = this.availableServices.filter(
-              ({ ip }) => ip !== rinfo.address,
-            );
-            this.availableServicesUpdateHandlers.forEach((handler) => {
-              handler();
-            });
-            this.verifiedServices = this.verifiedServices.filter(
-              ({ ip }) => ip !== rinfo.address,
-            );
-            break;
-          case UdpMessage.TELL_AVAILABLE_SERVICE:
-            // 有新的可用 Service，添加可用记录
-            if (!info) {
-              // 无效包，丢弃
               break;
-            }
-            // eslint-disable-next-line no-case-declarations
-            const target = this.availableServices.find(
-              ({ id }) => id === info.id,
-            );
-            if (!target) {
-              this.availableServices.push(info);
-              this.availableServicesUpdateHandlers.forEach((handler) => {
-                handler();
-              });
-            } else {
-              // 使用引用更新一波已有的记录
-              target.ip = info.ip;
-              target.port = info.port;
-              target.name = info.name;
-            }
-            break;
-          default:
+            default:
+          }
+        } catch (err) {
+          console.log(
+            `[${new Date().toLocaleTimeString()}] Udp Socket parse data failed, Remote IP: ${rinfo.address}`,
+            err,
+          );
         }
-      } catch (err) {
-        console.log(
-          `[${new Date().toLocaleTimeString()}] Udp Socket parse data failed, Remote IP: ${rinfo.address}`,
-          err,
-        );
-      }
-    };
+      };
 
-    this.udpSocket = createUdpSocket('udp4', udpHandler.bind(this));
-    // 如果 RUNTIME 是测试，则不开启 UDP 服务
-    if (process.env.RUNTIME === 'test') {
-      return;
-    }
-    // UDP 只能使用熟知端口 86
-    this.udpSocket.bind(86, () => {
-      console.log(`UDP Server listening on ${ip.address()}:86`);
-      // 开启广播收发能力
-      this.udpSocket.setBroadcast(true);
+      this.udpSocket = createUdpSocket('udp4', udpHandler.bind(this));
+      // 如果 RUNTIME 是测试，则不开启 UDP 服务
+      if (process.env.RUNTIME === 'test') {
+        return;
+      }
+      // UDP 只能使用熟知端口 86
+      this.udpSocket.bind(86, () => {
+        console.log(`UDP Server listening on ${ip.address()}:86`);
+        // 开启广播收发能力
+        this.udpSocket.setBroadcast(true);
+        resolve();
+      });
     });
   }
 }

@@ -18,6 +18,7 @@ service.addAvailableServicesUpdateHandler(() => {
 
 setTimeout(() => {
   const currentAvailableServices = service.getAvailableServices();
+  console.log('Current available services: ', currentAvailableServices);
   const task = service.sendFile({
     path: './package.json',
     targetId: currentAvailableServices[0].id,
@@ -35,4 +36,4 @@ setTimeout(() => {
     .catch((err) => {
       console.log('传输失败', err);
     });
-}, 3000);
+}, 10000);
