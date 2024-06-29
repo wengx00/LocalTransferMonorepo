@@ -319,7 +319,7 @@ export class Service implements IService {
 
       const { ip: host, port } = target;
 
-      stat(path).then((res) => {
+      stat(path).then(async (res) => {
         const { size } = res;
         if (!res.isFile()) {
           reject(JsonResponse.fail(errcode.BAD_REQUEST, '目标路径不是文件'));
@@ -343,8 +343,9 @@ export class Service implements IService {
 
         const proxy = new Protocol(socket);
         let chunk: Buffer = Buffer.alloc(0);
-        let verified = false;
         let socketError = false;
+
+        await proxy.sendBytes(JSON.stringify(transferInfo));
 
         const proxyHandler = async ({
           buffer,
@@ -352,9 +353,6 @@ export class Service implements IService {
           status,
         }: HandlerContext) => {
           // 需要接受一次合法性检验才能开始发送
-          if (verified) {
-            return;
-          }
           if (error) {
             reject(
               JsonResponse.fail(errcode.PROTOCOL_EXCEPTION, error.message),
@@ -366,8 +364,6 @@ export class Service implements IService {
             chunk = Buffer.concat([chunk, buffer]);
             return;
           }
-          console.log('合法性检查通过');
-          verified = true;
           const { retcode, errMsg } = JSON.parse(
             chunk.toString('utf-8'),
           ) as JsonResponse;
@@ -375,15 +371,16 @@ export class Service implements IService {
           if (retcode !== 0) {
             reject(JsonResponse.fail(retcode, errMsg));
             socket.end();
+            return;
           }
           chunk = Buffer.alloc(0);
 
+          console.log('合法性检查通过');
           // 验证通过，开始发送流程
           const startTime = +new Date();
 
           onLaunch?.(transferInfo);
 
-          await proxy.sendBytes(JSON.stringify(transferInfo));
           if (socketError) {
             // 假如在事件循环中出现了 Socket 错误，直接结束流程
             return;
@@ -500,21 +497,6 @@ export class Service implements IService {
         remote.address = ipSeq[ipSeq.length - 1];
       }
       const proxy = new Protocol(socket);
-      if (!this.verifiedServices.find(({ ip }) => ip === remote.address)) {
-        proxy
-          .sendBytes(
-            JsonResponse.fail(errcode.UNAUTHORIZED, '未受信的设备').toJSON(),
-          )
-          .finally(() => {
-            socket.end();
-          });
-        return;
-      }
-
-      // 发送校验成功回包
-      socket.on('ready', () => {
-        proxy.sendBytes(JsonResponse.ok().toJSON());
-      });
 
       let transferInfo: TransferInfo | null = null;
       // 上一次至今接收的字节数
@@ -555,6 +537,21 @@ export class Service implements IService {
           }
           try {
             transferInfo = JSON.parse(chunk.toString('utf-8'));
+            if (
+              !this.verifiedServices.find(({ ip }) => ip === remote.address)
+            ) {
+              proxy
+                .sendBytes(
+                  JsonResponse.fail(
+                    errcode.UNAUTHORIZED,
+                    '未受信的设备',
+                  ).toJSON(),
+                )
+                .finally(() => {
+                  socket.end();
+                });
+              return;
+            }
           } catch (err) {
             // 忽略无法解析的JSON
             transferInfo = null;
