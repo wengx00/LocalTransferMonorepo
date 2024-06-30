@@ -348,7 +348,8 @@ export class Service implements IService {
           sourceId: this.id,
         };
 
-        console.log('TransferInfo', transferInfo);
+        console.log('TransferInfo: ', transferInfo);
+        console.log('Target address: ', host, port);
 
         const socket = createConnection({
           port,
@@ -381,6 +382,9 @@ export class Service implements IService {
             return;
           }
           if (status !== ProtocolStatus.DONE) {
+            if (process.env.RUNTIME === 'e2e') {
+              console.log('接收 TransferInfo 片段', buffer.length);
+            }
             chunk = Buffer.concat([chunk, buffer]);
             return;
           }
@@ -449,7 +453,7 @@ export class Service implements IService {
           reject(JsonResponse.fail(errcode.SOCKET_ERROR, 'socket error'));
         });
 
-        socket.on('ready', () => {
+        socket.on('connect', () => {
           if (process.env.RUNTIME === 'e2e') {
             console.log('TCP Socket 已建立... 发送 TransferInfo', transferInfo);
           }
@@ -557,8 +561,8 @@ export class Service implements IService {
         const { error, buffer, status, total } = context;
 
         if (error) {
+          console.log('接收文件时出错', error);
           this.receiveFileHandlers.forEach((handler) => {
-            console.log('接收文件时出错', error);
             handler(
               {} as any,
               JsonResponse.fail(errcode.PROTOCOL_EXCEPTION, error.message),
@@ -730,6 +734,12 @@ export class Service implements IService {
           batchId = '';
           lastReceivedTime = 0;
           receivedBytes = 0;
+        }
+      });
+
+      socket.on('connect', () => {
+        if (process.env.RUNTIME === 'e2e') {
+          console.log('Socket connected: ', remote.address, remote.port);
         }
       });
     });
