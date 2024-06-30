@@ -585,8 +585,9 @@ export class Service implements IService {
         }
 
         if (!transferInfo) {
+          // 接收TransferInfo时不是流，需要完整接收JSON
+          chunk = Buffer.concat([chunk, buffer]);
           if (status !== ProtocolStatus.DONE) {
-            // 接收TransferInfo时不是流，需要完整接收JSON
             if (process.env.RUNTIME === 'e2e') {
               console.log(
                 '接收 TransferInfo 片段',
@@ -595,7 +596,6 @@ export class Service implements IService {
                 total,
               );
             }
-            chunk = Buffer.concat([chunk, buffer]);
             return;
           }
           if (process.env.RUNTIME === 'e2e') {
