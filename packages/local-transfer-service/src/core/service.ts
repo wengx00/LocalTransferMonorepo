@@ -351,20 +351,10 @@ export class Service implements IService {
         console.log('TransferInfo: ', transferInfo);
         console.log('Target address: ', host, port);
 
-        const socket = createConnection(
-          {
-            port,
-            host,
-          },
-          () => {
-            if (process.env.RUNTIME === 'e2e') {
-              console.log(
-                'TCP Socket 已建立... 发送 TransferInfo',
-                transferInfo,
-              );
-            }
-          },
-        );
+        const socket = createConnection({
+          port,
+          host,
+        });
 
         const proxy = new Protocol(socket);
         let chunk: Buffer = Buffer.alloc(0);
@@ -375,6 +365,7 @@ export class Service implements IService {
           buffer,
           error,
           status,
+          total,
         }: HandlerContext) => {
           // 需要接受一次合法性检验才能开始发送
           if (done) {
@@ -391,26 +382,40 @@ export class Service implements IService {
             socket.end();
             return;
           }
+          chunk = Buffer.concat([chunk, buffer]);
           if (status !== ProtocolStatus.DONE) {
             if (process.env.RUNTIME === 'e2e') {
-              console.log('接收 TransferInfo 片段', buffer.length);
+              console.log(
+                '接收 TransferInfo 片段',
+                buffer.length,
+                '总长度: ',
+                total,
+              );
             }
-            chunk = Buffer.concat([chunk, buffer]);
             return;
           }
-          const { retcode, errMsg } = JSON.parse(
-            chunk.toString('utf-8'),
-          ) as JsonResponse;
 
-          if (retcode !== 0) {
-            if (process.env.RUNTIME === 'e2e') {
-              console.log('目标设备不信任本机', retcode, errMsg);
+          try {
+            const { retcode, errMsg } = JSON.parse(
+              chunk.toString('utf-8'),
+            ) as JsonResponse;
+            if (retcode !== 0) {
+              if (process.env.RUNTIME === 'e2e') {
+                console.log('目标设备不信任本机', retcode, errMsg);
+              }
+              reject(JsonResponse.fail(retcode, errMsg));
+              socket.end();
+              return;
             }
-            reject(JsonResponse.fail(retcode, errMsg));
+          } catch (err) {
+            console.log('解析信任授权回包时出错', err);
+            reject(JsonResponse.fail(errcode.PROTOCOL_EXCEPTION, String(err)));
+            done = true;
             socket.end();
             return;
+          } finally {
+            chunk = Buffer.alloc(0);
           }
-          chunk = Buffer.alloc(0);
 
           console.log('合法性检查通过');
           // 验证通过，开始发送流程
@@ -454,11 +459,6 @@ export class Service implements IService {
 
         proxy.addHandler(proxyHandler);
 
-        if (process.env.RUNTIME === 'e2e') {
-          console.log('发送 TransferInfo 以校验身份');
-        }
-        proxy.sendBytes(JSON.stringify(transferInfo));
-
         socket.on('end', () => proxy.removeHandler(proxyHandler));
 
         socket.on('error', (err) => {
@@ -466,6 +466,13 @@ export class Service implements IService {
           socketError = true;
           proxy.removeHandler(proxyHandler);
           reject(JsonResponse.fail(errcode.SOCKET_ERROR, 'socket error'));
+        });
+
+        socket.on('connect', () => {
+          if (process.env.RUNTIME === 'e2e') {
+            console.log('TCP Socket 已建立... 发送 TransferInfo', transferInfo);
+          }
+          proxy.sendBytes(JSON.stringify(transferInfo));
         });
       });
     });
