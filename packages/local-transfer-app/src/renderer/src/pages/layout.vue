@@ -32,7 +32,7 @@
       <div class="header">
         <div class="current-device">
           <div style="width: 30%">设备ID: {{ serviceInfo.serviceId }}</div>
-          <div>设备名称：{{ serviceInfo.serviceName }}</div>
+          <div>设备名称：{{ serviceInfo.serviceName ? serviceInfo.serviceName : '未知设备' }}</div>
         </div>
       </div>
       <div class="content">
@@ -62,6 +62,7 @@ const router = useRouter();
 onMounted(async () => {
   // 初始化 Menu 值
   appConfig.setCurrentMenuValue('settings');
+  await serviceInfo.refresh();
 });
 
 watch(storeToRefs(appConfig).currentMenuValue, () => {

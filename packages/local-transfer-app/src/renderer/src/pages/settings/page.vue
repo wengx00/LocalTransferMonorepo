@@ -9,63 +9,90 @@
       <t-button style="flex-shrink: 0" theme="default" @click="getServiceName">获取名称</t-button>
     </div>
     <div class="row">
-      <t-select v-model="pathType" placeholder="选择目录类型">
-        <t-option key="downloads" value="downloads" label="下载目录" />
-        <t-option key="desktop" value="desktop" label="桌面" />
-        <t-option key="home" value="home" label="用户目录" />
-        <t-option key="exe" value="exe" label="当前可执行目录" />
-        <t-option key="temp" value="temp" label="临时目录" />
-      </t-select>
-      <t-button style="flex-shrink: 0" @click="getTargetPath">默认下载路径</t-button>
+      <t-input v-model="pathType" placeholder="请选择下载路径" disabled />
+      <t-button style="flex-shrink: 0" @click="openFileDialog">修改下载路径</t-button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { PathType } from '@ipc/native';
+import { useServiceInfo } from '@renderer/utils/store/service-info';
 import nativeApi from '@renderer/apis/native';
-import serviceApi from '@renderer/apis/service';
 import interact from '@renderer/utils/interact';
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 
-const pathType = ref('');
+const serviceInfo = useServiceInfo();
+const pathType = ref('downloads');
 const serviceName = ref('');
-
 // 获取目标目录路径
 async function getTargetPath() {
-  if (!pathType.value) {
-    interact.message.error('请选择目录类型');
+  const localPath = localStorage.getItem('pathType');
+  if (localPath) {
+    pathType.value = localPath;
     return;
   }
-
   try {
-    const path = await nativeApi.invoke.getPath(pathType.value as PathType);
-    interact.dialog({
-      title: '目标路径',
-      content: path
-    });
+    const path = await nativeApi.invoke.getPath('downloads');
+    pathType.value = path;
   } catch (err) {
     console.log(err);
     interact.message.error(String(err));
   }
 }
 
+onMounted(async () => {
+  getTargetPath();
+  getServiceName();
+});
+
 // 修改设备名称
 function setServiceName() {
-  serviceApi.invoke
-    .setName(serviceName.value)
-    .then(() => {
-      interact.message.success('设备名称修改成功');
-    })
-    .catch(async (err) => {
-      interact.message.error(String(err));
-      serviceName.value = await serviceApi.invoke.getName();
-    });
+  localStorage.setItem('serviceName', serviceName.value);
+  serviceInfo.setServiceName(serviceName.value);
 }
 
 // 获取设备名称
 async function getServiceName() {
-  serviceName.value = await serviceApi.invoke.getName();
+  const localPath = localStorage.getItem('serviceName');
+  if (localPath) {
+    serviceName.value = localPath;
+    serviceInfo.setServiceName(localPath);
+    return;
+  }
+}
+
+// 修改下载路径
+async function openFileDialog() {
+  try {
+    const result = await nativeApi.invoke.openFileDialog({
+      title: '选择文件夹',
+      buttonLabel: '选择',
+      filters: [],
+      properties: {
+        openFile: true,
+        openDirectory: true,
+        multiSelections: true
+      }
+    });
+
+    if (!result || result.length === 0) {
+      interact.message.warning('用户取消选择');
+      return;
+    }
+
+    pathType.value = result[0];
+    localStorage.setItem('pathType', result[0]);
+
+    // 更新路径设置
+    try {
+      await nativeApi.invoke.getPath('downloads');
+      interact.message.success('下载路径已更新');
+    } catch (err) {
+      interact.message.error(String(err));
+    }
+  } catch (error) {
+    interact.message.error('打开文件夹对话框出错');
+  }
 }
 </script>
 
@@ -83,12 +110,6 @@ async function getServiceName() {
     display: flex;
     align-items: center;
     width: 100%;
-    gap: 0.6rem;
-  }
-  .row {
-    @include flex(row, flex-start, center);
-    width: 100%;
-
     gap: 0.6rem;
   }
 }

@@ -22,11 +22,16 @@ export const useServiceInfo = defineStore('service-info', () => {
     serviceName.value = name;
   }
 
+  //获取 Service 名称
+  async function getServiceName() {
+    serviceName.value = await serviceApi.invoke.getName();
+  }
   return {
     serviceName,
     serviceId,
 
     refresh,
-    setServiceName
+    setServiceName,
+    getServiceName
   };
 });
