@@ -84,7 +84,7 @@ export class Protocol {
         if (pendingLength >= buffer.length) {
           // 读取长度不小于本次接收buffer的长度
           pendingLength -= buffer.length;
-          if (pendingLength === buffer.length) {
+          if (pendingLength === 0) {
             // 读完了完整的包
             this.receiveStatus = ProtocolStatus.DONE;
           }
