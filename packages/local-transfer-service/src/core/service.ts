@@ -360,8 +360,6 @@ export class Service implements IService {
         let socketError = false;
         let done = false;
 
-        await proxy.sendBytes(JSON.stringify(transferInfo));
-
         const proxyHandler = async ({
           buffer,
           error,
@@ -437,10 +435,18 @@ export class Service implements IService {
 
         socket.on('end', () => proxy.removeHandler(proxyHandler));
 
-        socket.on('error', () => {
+        socket.on('error', (err) => {
+          console.log('socket error', err);
           socketError = true;
           proxy.removeHandler(proxyHandler);
           reject(JsonResponse.fail(errcode.SOCKET_ERROR, 'socket error'));
+        });
+
+        socket.on('ready', () => {
+          if (process.env.RUNTIME === 'e2e') {
+            console.log('TCP Socket 已建立... 发送 TransferInfo', transferInfo);
+          }
+          proxy.sendBytes(JSON.stringify(transferInfo));
         });
       });
     });
@@ -545,6 +551,7 @@ export class Service implements IService {
 
         if (error) {
           this.receiveFileHandlers.forEach((handler) => {
+            console.log('接收文件时出错', error);
             handler(
               {} as any,
               JsonResponse.fail(errcode.PROTOCOL_EXCEPTION, error.message),

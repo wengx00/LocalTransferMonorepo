@@ -5,7 +5,7 @@
   "description": "",
   "main": "index.ts",
   "scripts": {
-    "test": "pnpm build && node ./dist/index.cjs",
+    "test": "cross-env RUNTIME=e2e pnpm build && node ./dist/index.cjs",
     "dev": "ts-node index",
     "build": "rollup --config rollup.config.js"
   },

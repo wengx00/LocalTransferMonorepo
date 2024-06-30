@@ -59,6 +59,28 @@ importers:
         specifier: ^11.1.6
         version: 11.1.6(rollup@4.18.0)(typescript@5.4.5)
 
+  packages/cmd-test/dist:
+    dependencies:
+      local-transfer-service:
+        specifier: workspace:^
+        version: link:../../local-transfer-service
+    devDependencies:
+      '@rollup/plugin-commonjs':
+        specifier: ^26.0.1
+        version: 26.0.1(rollup@4.18.0)
+      '@rollup/plugin-json':
+        specifier: ^6.1.0
+        version: 6.1.0(rollup@4.18.0)
+      '@rollup/plugin-node-resolve':
+        specifier: ^15.2.3
+        version: 15.2.3(rollup@4.18.0)
+      '@rollup/plugin-terser':
+        specifier: ^0.4.4
+        version: 0.4.4(rollup@4.18.0)
+      '@rollup/plugin-typescript':
+        specifier: ^11.1.6
+        version: 11.1.6(rollup@4.18.0)(typescript@5.4.5)
+
   packages/local-transfer-app:
     dependencies:
       '@electron-toolkit/preload':
