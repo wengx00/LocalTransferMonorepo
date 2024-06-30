@@ -597,6 +597,9 @@ export class Service implements IService {
             console.log('接收 TransferInfo 完毕');
           }
           try {
+            if (process.env.RUNTIME === 'e2e') {
+              console.log('TransferInfo 原始字符串: ', chunk.toString('utf-8'));
+            }
             transferInfo = JSON.parse(chunk.toString('utf-8'));
             console.log('TransferInfo: ', transferInfo);
             if (
