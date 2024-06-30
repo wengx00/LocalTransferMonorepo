@@ -351,10 +351,20 @@ export class Service implements IService {
         console.log('TransferInfo: ', transferInfo);
         console.log('Target address: ', host, port);
 
-        const socket = createConnection({
-          port,
-          host,
-        });
+        const socket = createConnection(
+          {
+            port,
+            host,
+          },
+          () => {
+            if (process.env.RUNTIME === 'e2e') {
+              console.log(
+                'TCP Socket 已建立... 发送 TransferInfo',
+                transferInfo,
+              );
+            }
+          },
+        );
 
         const proxy = new Protocol(socket);
         let chunk: Buffer = Buffer.alloc(0);
@@ -444,6 +454,11 @@ export class Service implements IService {
 
         proxy.addHandler(proxyHandler);
 
+        if (process.env.RUNTIME === 'e2e') {
+          console.log('发送 TransferInfo 以校验身份');
+        }
+        proxy.sendBytes(JSON.stringify(transferInfo));
+
         socket.on('end', () => proxy.removeHandler(proxyHandler));
 
         socket.on('error', (err) => {
@@ -452,11 +467,6 @@ export class Service implements IService {
           proxy.removeHandler(proxyHandler);
           reject(JsonResponse.fail(errcode.SOCKET_ERROR, 'socket error'));
         });
-
-        if (process.env.RUNTIME === 'e2e') {
-          console.log('TCP Socket 已建立... 发送 TransferInfo', transferInfo);
-        }
-        proxy.sendBytes(JSON.stringify(transferInfo));
       });
     });
   }
@@ -744,7 +754,7 @@ export class Service implements IService {
     }
 
     // 如果 RUNTIME 是测试，则不开启 TCP 服务
-    this.tcpServer.listen(this.tcpPort, () => {
+    this.tcpServer.listen(this.tcpPort, '0.0.0.0', () => {
       console.log(`TCP Server listening on ${ip.address()}:${this.tcpPort}`);
     });
   }
@@ -797,7 +807,12 @@ export class Service implements IService {
                   ({ id }) => id === info.id,
                 );
                 if (!target) {
-                  this.availableServices.push(info);
+                  this.availableServices.push({
+                    id: info.id,
+                    ip: rinfo.address,
+                    port: info.port,
+                    name: info.name,
+                  });
                   this.availableServicesUpdateHandlers.forEach((handler) => {
                     handler();
                   });
@@ -827,13 +842,18 @@ export class Service implements IService {
                 ({ id }) => id === info.id,
               );
               if (!target) {
-                this.availableServices.push(info);
+                this.availableServices.push({
+                  id: info.id,
+                  ip: rinfo.address,
+                  port: info.port,
+                  name: info.name,
+                });
                 this.availableServicesUpdateHandlers.forEach((handler) => {
                   handler();
                 });
               } else {
                 // 使用引用更新一波已有的记录
-                target.ip = info.ip;
+                target.ip = rinfo.address;
                 target.port = info.port;
                 target.name = info.name;
               }
