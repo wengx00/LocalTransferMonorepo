@@ -31,8 +31,8 @@
     <div class="body">
       <div class="header">
         <div class="current-device">
-          <div style="width: 30%">设备ID: {{ serviceId }}</div>
-          <div>设备名称：{{ serviceName }}</div>
+          <div style="width: 30%">设备ID: {{ serviceInfo.serviceId }}</div>
+          <div>设备名称：{{ serviceInfo.serviceName }}</div>
         </div>
       </div>
       <div class="content">
@@ -46,29 +46,22 @@
 </template>
 
 <script setup lang="ts">
-import serviceApi from '@renderer/apis/service';
-import { onMounted, ref } from 'vue';
+import { onMounted } from 'vue';
 
 import constants from '@renderer/utils/constants';
+import { useServiceInfo } from '@renderer/utils/store/service-info';
 import { useAppConfig } from '@utils/store/app-config';
-import { watch } from 'vue';
 import { storeToRefs } from 'pinia';
+import { watch } from 'vue';
 import { useRouter } from 'vue-router';
 
 const appConfig = useAppConfig();
+const serviceInfo = useServiceInfo();
 const router = useRouter();
-
-const serviceId = ref('');
-const serviceName = ref('');
-async function getServiceName() {
-  serviceName.value = await serviceApi.invoke.getName();
-}
 
 onMounted(async () => {
   // 初始化 Menu 值
   appConfig.setCurrentMenuValue('settings');
-  serviceId.value = await serviceApi.invoke.getId();
-  await getServiceName();
 });
 
 watch(storeToRefs(appConfig).currentMenuValue, () => {
