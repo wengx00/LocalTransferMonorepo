@@ -77,10 +77,10 @@ export class Protocol {
           continue;
         }
         // 读取数据到pendingBuffer，长度不超过header指定的长度
-        pendingBuffer = Buffer.concat([
-          pendingBuffer,
-          buffer.subarray(0, Math.min(buffer.length, pendingLength)),
-        ]);
+        pendingBuffer = buffer.subarray(
+          0,
+          Math.min(buffer.length, pendingLength),
+        );
         if (pendingLength >= buffer.length) {
           // 读取长度不小于本次接收buffer的长度
           pendingLength -= buffer.length;
@@ -105,8 +105,8 @@ export class Protocol {
         if (pendingLength === 0) {
           this.receiveStatus = ProtocolStatus.NOT_START;
           totalLength = 0;
-          pendingBuffer = Buffer.alloc(0);
         }
+        pendingBuffer = Buffer.alloc(0);
       }
     });
   }

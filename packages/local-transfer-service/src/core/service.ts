@@ -588,7 +588,12 @@ export class Service implements IService {
           if (status !== ProtocolStatus.DONE) {
             // 接收TransferInfo时不是流，需要完整接收JSON
             if (process.env.RUNTIME === 'e2e') {
-              console.log('接收 TransferInfo 片段', buffer.length);
+              console.log(
+                '接收 TransferInfo 片段',
+                buffer.length,
+                '总长度: ',
+                total,
+              );
             }
             chunk = Buffer.concat([chunk, buffer]);
             return;
