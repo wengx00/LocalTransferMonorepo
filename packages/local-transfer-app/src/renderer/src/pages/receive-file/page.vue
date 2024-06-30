@@ -50,13 +50,6 @@
         <button class="receive-button" @click="trustDevice">
           {{ selectedDevice.deviceTrust ? '解除信任' : '信任设备' }}
         </button>
-        <button
-          :class="selectedDevice.deviceTrust ? 'receive-button' : 'button-NotTrust'"
-          :disabled="!selectedDevice.deviceTrust"
-          :title="selectedDevice.deviceTrust ? '' : '请先信任设备'"
-        >
-          接收文件
-        </button>
       </t-col>
     </div>
   </div>
@@ -247,11 +240,13 @@ const refreshNearbyDevices = async () => {
 
 .deviceTrust,
 .deviceNotTrust {
-  min-width: 5rem;
-  height: 3rem;
+  display: flex;
+  align-items: center;
+  min-width: 4rem;
+  height: 2.5rem;
   margin-left: auto;
-  padding: 3px 10px;
-  font-size: 1.2rem;
+  padding: 3px 5px;
+  font-size: 1rem;
   border-radius: 5px;
 }
 
@@ -347,21 +342,6 @@ const refreshNearbyDevices = async () => {
 
 .receive-button:hover:before {
   width: 100%;
-}
-
-.button-NotTrust {
-  content: '请先信任设备';
-  width: 30%;
-  padding: 10px 20px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  background-color: #d3d3d3;
-  color: rgb(0, 0, 0);
-  border: none;
-  cursor: not-allowed;
-  position: relative;
-  overflow: hidden;
-  z-index: 0;
 }
 
 .status-circle {

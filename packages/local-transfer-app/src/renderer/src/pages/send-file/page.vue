@@ -12,7 +12,7 @@
     </div>
     <div class="receive-file">
       <div class="device-info">
-        附近设备
+        选择发送的设备
         <div class="recent-receive">
           <t-checkbox-group v-model="selectedDevices">
             <ul>
@@ -42,14 +42,14 @@
                 active: dragOver
               }
             ]"
+            @click="openFileDialog"
             @drop="handleDropFile"
             @dragover="handleDragOver"
             @dragleave="handleDragLeave"
           >
-            将文件拖拽至此
+            点击选择或将文件拖拽至此
           </div>
           <t-col class="sendFile-button">
-            <t-button @click="openFileDialog">打开文件选择框</t-button>
             <t-button theme="primary" @click="sendFile">发送</t-button>
           </t-col>
         </div>
@@ -61,7 +61,7 @@
             placeholder="请输入要传输的文本"
             :maxlength="5000"
           />
-          <t-col class="sendFile-button" :offset="9">
+          <t-col class="sendFile-button">
             <t-button theme="primary" @click="transferText">发送</t-button>
           </t-col>
         </div>
@@ -249,7 +249,7 @@ function sendFile() {
 
 .sendFile-button {
   display: flex;
-  width: 100%;
+  margin-left: auto;
   justify-content: space-between;
   font-size: 16px;
 }
@@ -382,6 +382,7 @@ function sendFile() {
   }
 
   .drag-area {
+    cursor: pointer;
     display: flex;
     justify-content: center;
     align-items: center;
