@@ -159,7 +159,7 @@ export class Service implements IService {
 
       const proxy = new Protocol(socket);
       let chunk: Buffer = Buffer.alloc(0);
-      let verified = false;
+      let done = false;
       let socketError = false;
 
       const proxyHandler = async ({
@@ -167,7 +167,7 @@ export class Service implements IService {
         error,
         status,
       }: HandlerContext) => {
-        if (verified) {
+        if (done) {
           return;
         }
 
@@ -182,27 +182,40 @@ export class Service implements IService {
           return;
         }
 
-        verified = true;
+        try {
+          const { retcode, errMsg } = JSON.parse(
+            chunk.toString('utf-8'),
+          ) as JsonResponse;
 
-        const { retcode, errMsg } = JSON.parse(
-          chunk.toString('utf-8'),
-        ) as JsonResponse;
-
-        if (retcode !== 0) {
-          reject(JsonResponse.fail(retcode, errMsg));
+          if (retcode !== 0) {
+            reject(JsonResponse.fail(retcode, errMsg));
+            socket.end();
+            return;
+          }
+        } catch (err) {
+          console.log('发送文本时回包错误', err);
+          reject(JsonResponse.fail(errcode.PROTOCOL_EXCEPTION, String(err)));
           socket.end();
           return;
+        } finally {
+          chunk = Buffer.alloc(0);
         }
 
-        chunk = Buffer.alloc(0);
-
         // 开始发送数据
-        await proxy.sendBytes(JSON.stringify(fileInfo));
         if (socketError) {
           return;
         }
 
-        await proxy.sendBytes(text);
+        try {
+          await proxy.sendBytes(text);
+        } catch (err) {
+          console.log('发送文本时发送数据错误', err);
+          reject(JsonResponse.fail(errcode.PROTOCOL_EXCEPTION, String(err)));
+          return;
+        } finally {
+          done = true;
+          socket.end();
+        }
         if (socketError) {
           return;
         }
@@ -220,6 +233,7 @@ export class Service implements IService {
         proxy.removeHandler(proxyHandler);
         reject(JsonResponse.fail(errcode.SOCKET_ERROR, 'socket error'));
       });
+      proxy.sendBytes(JSON.stringify(fileInfo));
     });
   }
 
@@ -334,7 +348,7 @@ export class Service implements IService {
           sourceId: this.id,
         };
 
-        console.log('transferInfo', transferInfo);
+        console.log('TransferInfo', transferInfo);
 
         const socket = createConnection({
           port,
@@ -344,6 +358,7 @@ export class Service implements IService {
         const proxy = new Protocol(socket);
         let chunk: Buffer = Buffer.alloc(0);
         let socketError = false;
+        let done = false;
 
         await proxy.sendBytes(JSON.stringify(transferInfo));
 
@@ -353,6 +368,9 @@ export class Service implements IService {
           status,
         }: HandlerContext) => {
           // 需要接受一次合法性检验才能开始发送
+          if (done) {
+            return;
+          }
           if (error) {
             reject(
               JsonResponse.fail(errcode.PROTOCOL_EXCEPTION, error.message),
@@ -386,26 +404,33 @@ export class Service implements IService {
             return;
           }
           const readStream = createReadStream(path);
-          proxy.sendStream(readStream, size, {
-            onDone() {
-              resolve({
-                ...transferInfo,
-                cost: (+new Date() - startTime) / 1000,
-              });
-            },
-            onError(err) {
-              reject(
-                JsonResponse.fail(errcode.PROTOCOL_EXCEPTION, err.message),
-              );
-            },
-            onProgress(percent, speed) {
-              onProgress?.({
-                ...transferInfo,
-                progress: percent,
-                speed,
-              });
-            },
-          });
+          try {
+            await proxy.sendStream(readStream, size, {
+              onDone() {
+                resolve({
+                  ...transferInfo,
+                  cost: (+new Date() - startTime) / 1000,
+                });
+              },
+              onError(err) {
+                reject(
+                  JsonResponse.fail(errcode.PROTOCOL_EXCEPTION, err.message),
+                );
+              },
+              onProgress(percent, speed) {
+                onProgress?.({
+                  ...transferInfo,
+                  progress: percent,
+                  speed,
+                });
+              },
+            });
+          } catch (err) {
+            console.log('发送文件时出错', err);
+          } finally {
+            done = true;
+            socket.end();
+          }
         };
 
         proxy.addHandler(proxyHandler);
@@ -526,19 +551,29 @@ export class Service implements IService {
             );
           });
           transferInfo = null;
+          console.log();
           return;
         }
 
         if (!transferInfo) {
           if (status !== ProtocolStatus.DONE) {
             // 接收TransferInfo时不是流，需要完整接收JSON
+            if (process.env.RUNTIME === 'e2e') {
+              console.log('接收 TransferInfo 片段', buffer.length);
+            }
             chunk = Buffer.concat([chunk, buffer]);
             return;
           }
+          if (process.env.RUNTIME === 'e2e') {
+            console.log('接收 TransferInfo 完毕');
+          }
           try {
             transferInfo = JSON.parse(chunk.toString('utf-8'));
+            console.log('TransferInfo: ', transferInfo);
             if (
-              !this.verifiedServices.find(({ ip }) => ip === remote.address)
+              !this.verifiedServices.find(
+                ({ id }) => id === transferInfo?.sourceId,
+              )
             ) {
               proxy
                 .sendBytes(
@@ -550,11 +585,33 @@ export class Service implements IService {
                 .finally(() => {
                   socket.end();
                 });
+              if (process.env.RUNTIME === 'e2e') {
+                console.log(
+                  '源 ID 不在受信列表中: ',
+                  transferInfo?.sourceId,
+                  'IP: ',
+                  remote.address,
+                );
+              }
               return;
             }
+            if (process.env.RUNTIME === 'e2e') {
+              console.log(
+                '源 ID 在受信列表中: ',
+                transferInfo?.sourceId,
+                'IP: ',
+                remote.address,
+              );
+            }
+            proxy.sendBytes(JsonResponse.ok().toJSON());
           } catch (err) {
             // 忽略无法解析的JSON
             transferInfo = null;
+            chunk = Buffer.alloc(0);
+            if (process.env.RUNTIME === 'e2e') {
+              console.log('无法解析的 TransferInfo');
+            }
+            socket.end();
             return;
           } finally {
             chunk = Buffer.alloc(0);
