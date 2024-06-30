@@ -453,12 +453,10 @@ export class Service implements IService {
           reject(JsonResponse.fail(errcode.SOCKET_ERROR, 'socket error'));
         });
 
-        socket.on('connect', () => {
-          if (process.env.RUNTIME === 'e2e') {
-            console.log('TCP Socket 已建立... 发送 TransferInfo', transferInfo);
-          }
-          proxy.sendBytes(JSON.stringify(transferInfo));
-        });
+        if (process.env.RUNTIME === 'e2e') {
+          console.log('TCP Socket 已建立... 发送 TransferInfo', transferInfo);
+        }
+        proxy.sendBytes(JSON.stringify(transferInfo));
       });
     });
   }
@@ -537,6 +535,9 @@ export class Service implements IService {
       if (remote.family?.toLowerCase() === 'ipv6') {
         const ipSeq = remote.address.split(':');
         remote.address = ipSeq[ipSeq.length - 1];
+      }
+      if (process.env.RUNTIME === 'e2e') {
+        console.log('Socket connected: ', remote.address, remote.port);
       }
       const proxy = new Protocol(socket);
 
@@ -734,12 +735,6 @@ export class Service implements IService {
           batchId = '';
           lastReceivedTime = 0;
           receivedBytes = 0;
-        }
-      });
-
-      socket.on('connect', () => {
-        if (process.env.RUNTIME === 'e2e') {
-          console.log('Socket connected: ', remote.address, remote.port);
         }
       });
     });
