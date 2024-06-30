@@ -367,9 +367,13 @@ export class Service implements IService {
         }: HandlerContext) => {
           // 需要接受一次合法性检验才能开始发送
           if (done) {
+            if (process.env.RUNTIME === 'e2e') {
+              console.log('接收已结束但仍接收到发包');
+            }
             return;
           }
           if (error) {
+            console.log('接收到错误', error);
             reject(
               JsonResponse.fail(errcode.PROTOCOL_EXCEPTION, error.message),
             );
@@ -385,6 +389,9 @@ export class Service implements IService {
           ) as JsonResponse;
 
           if (retcode !== 0) {
+            if (process.env.RUNTIME === 'e2e') {
+              console.log('目标设备不信任本机', retcode, errMsg);
+            }
             reject(JsonResponse.fail(retcode, errMsg));
             socket.end();
             return;
@@ -582,6 +589,14 @@ export class Service implements IService {
                 ({ id }) => id === transferInfo?.sourceId,
               )
             ) {
+              if (process.env.RUNTIME === 'e2e') {
+                console.log(
+                  '源 ID 不在受信列表中: ',
+                  transferInfo?.sourceId,
+                  'IP: ',
+                  remote.address,
+                );
+              }
               proxy
                 .sendBytes(
                   JsonResponse.fail(
@@ -592,14 +607,6 @@ export class Service implements IService {
                 .finally(() => {
                   socket.end();
                 });
-              if (process.env.RUNTIME === 'e2e') {
-                console.log(
-                  '源 ID 不在受信列表中: ',
-                  transferInfo?.sourceId,
-                  'IP: ',
-                  remote.address,
-                );
-              }
               return;
             }
             if (process.env.RUNTIME === 'e2e') {
@@ -706,7 +713,8 @@ export class Service implements IService {
         proxy.removeHandler(receiveHandler);
       });
 
-      socket.on('error', () => {
+      socket.on('error', (err) => {
+        console.log('Socket error: ', err);
         proxy.removeHandler(receiveHandler);
         if (batchId) {
           this.receiveFileHandlers.forEach((handler) => {

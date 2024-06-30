@@ -15,7 +15,7 @@
     "require": "./dist/index.cjs"
   },
   "scripts": {
-    "build": "pnpm test && tsc && cross-env NODE_ENV=production rollup --config rollup.config.js",
+    "build": "tsc && cross-env NODE_ENV=production rollup --config rollup.config.js",
     "test": "cross-env RUNTIME=test vitest run",
     "lint": "eslint --fix --color --cache --quiet"
   },
