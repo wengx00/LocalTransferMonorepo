@@ -144,7 +144,7 @@ export class Service implements IService {
 
       const { ip: host, port } = target;
       const batchId = nanoid(12);
-      const fileInfo: TransferInfo = {
+      const transferInfo: TransferInfo = {
         filename: '',
         size: text.length,
         batchId,
@@ -166,6 +166,7 @@ export class Service implements IService {
         buffer,
         error,
         status,
+        total,
       }: HandlerContext) => {
         if (done) {
           return;
@@ -177,8 +178,16 @@ export class Service implements IService {
           return;
         }
 
+        chunk = Buffer.concat([chunk, buffer]);
         if (status !== ProtocolStatus.DONE) {
-          chunk = Buffer.concat([chunk, buffer]);
+          if (process.env.RUNTIME === 'e2e') {
+            console.log(
+              '接收 TransferInfo 片段: ',
+              buffer.length,
+              '总长度: ',
+              total,
+            );
+          }
           return;
         }
 
@@ -193,7 +202,7 @@ export class Service implements IService {
             return;
           }
         } catch (err) {
-          console.log('发送文本时回包错误', err);
+          console.log('发送文本时回包解析错误', err);
           reject(JsonResponse.fail(errcode.PROTOCOL_EXCEPTION, String(err)));
           socket.end();
           return;
@@ -221,19 +230,26 @@ export class Service implements IService {
         }
 
         // 完成传输
-        resolve(fileInfo);
+        resolve(transferInfo);
       };
 
       proxy.addHandler(proxyHandler);
 
       socket.on('end', () => proxy.removeHandler(proxyHandler));
 
-      socket.on('error', () => {
+      socket.on('error', (err) => {
         socketError = true;
+        console.log('发送文本时 socket 错误', err);
         proxy.removeHandler(proxyHandler);
         reject(JsonResponse.fail(errcode.SOCKET_ERROR, 'socket error'));
       });
-      proxy.sendBytes(JSON.stringify(fileInfo));
+
+      socket.on('connect', () => {
+        if (process.env.RUNTIME === 'e2e') {
+          console.log('TCP Socket 已建立... 发送 TransferInfo', transferInfo);
+        }
+        proxy.sendBytes(JSON.stringify(transferInfo));
+      });
     });
   }
 
