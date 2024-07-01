@@ -26,6 +26,7 @@
     "@electron-toolkit/utils": "^3.0.0",
     "electron-updater": "^6.1.7",
     "pinia": "^2.1.7",
+    "tdesign-icons-vue-next": "^0.2.2",
     "tdesign-vue-next": "^1.9.6",
     "vue-router": "^4.3.3"
   },

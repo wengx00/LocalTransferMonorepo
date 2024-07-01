@@ -11,19 +11,19 @@
       </template>
       <t-menu-item value="receive-file">
         <template #icon>
-          <t-icon name="file-download" />
+          <FileDownloadIcon />
         </template>
         <p class="text">接收文件</p>
       </t-menu-item>
       <t-menu-item value="send-file">
         <template #icon>
-          <t-icon name="file-import" />
+          <FileImportIcon />
         </template>
         <p class="text">发送文件</p>
       </t-menu-item>
       <t-menu-item value="settings">
         <template #icon>
-          <t-icon name="system-setting" />
+          <SystemSettingIcon />
         </template>
         <p class="text">系统设置</p>
       </t-menu-item>
@@ -46,14 +46,13 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
-
+import { onMounted, watch } from 'vue';
 import constants from '@renderer/utils/constants';
 import { useServiceInfo } from '@renderer/utils/store/service-info';
 import { useAppConfig } from '@utils/store/app-config';
 import { storeToRefs } from 'pinia';
-import { watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { FileDownloadIcon, FileImportIcon, SystemSettingIcon } from 'tdesign-icons-vue-next';
 
 const appConfig = useAppConfig();
 const serviceInfo = useServiceInfo();
@@ -62,7 +61,7 @@ const router = useRouter();
 onMounted(async () => {
   // 初始化 Menu 值
   appConfig.setCurrentMenuValue('settings');
-  await serviceInfo.refresh();
+  await serviceInfo.initInfo();
 });
 
 watch(storeToRefs(appConfig).currentMenuValue, () => {
