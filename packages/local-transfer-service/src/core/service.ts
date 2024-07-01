@@ -101,7 +101,10 @@ export class Service implements IService {
     this.downloadRoot = downloadRoot;
     this.initServiceInfo();
     this.initTcpServer();
-    this.initUdpSocket();
+    this.initUdpSocket().then(() => {
+      // 启动服务时刷新一次可用列表
+      this.refresh();
+    });
   }
 
   addAvailableServicesUpdateHandler(
@@ -141,7 +144,7 @@ export class Service implements IService {
 
       const { ip: host, port } = target;
       const batchId = nanoid(12);
-      const fileInfo: TransferInfo = {
+      const transferInfo: TransferInfo = {
         filename: '',
         size: text.length,
         batchId,
@@ -156,15 +159,16 @@ export class Service implements IService {
 
       const proxy = new Protocol(socket);
       let chunk: Buffer = Buffer.alloc(0);
-      let verified = false;
+      let done = false;
       let socketError = false;
 
       const proxyHandler = async ({
         buffer,
         error,
         status,
+        total,
       }: HandlerContext) => {
-        if (verified) {
+        if (done) {
           return;
         }
 
@@ -174,48 +178,77 @@ export class Service implements IService {
           return;
         }
 
+        chunk = Buffer.concat([chunk, buffer]);
         if (status !== ProtocolStatus.DONE) {
-          chunk = Buffer.concat([chunk, buffer]);
+          if (process.env.RUNTIME === 'e2e') {
+            console.log(
+              '接收 TransferInfo 片段: ',
+              buffer.length,
+              '总长度: ',
+              total,
+            );
+          }
           return;
         }
 
-        verified = true;
+        try {
+          const { retcode, errMsg } = JSON.parse(
+            chunk.toString('utf-8'),
+          ) as JsonResponse;
 
-        const { retcode, errMsg } = JSON.parse(
-          chunk.toString('utf-8'),
-        ) as JsonResponse;
-
-        if (retcode !== 0) {
-          reject(JsonResponse.fail(retcode, errMsg));
+          if (retcode !== 0) {
+            reject(JsonResponse.fail(retcode, errMsg));
+            socket.end();
+            return;
+          }
+        } catch (err) {
+          console.log('发送文本时回包解析错误', err);
+          reject(JsonResponse.fail(errcode.PROTOCOL_EXCEPTION, String(err)));
           socket.end();
           return;
+        } finally {
+          chunk = Buffer.alloc(0);
         }
 
-        chunk = Buffer.alloc(0);
-
         // 开始发送数据
-        await proxy.sendBytes(JSON.stringify(fileInfo));
         if (socketError) {
           return;
         }
 
-        await proxy.sendBytes(text);
+        try {
+          await proxy.sendBytes(text);
+        } catch (err) {
+          console.log('发送文本时发送数据错误', err);
+          reject(JsonResponse.fail(errcode.PROTOCOL_EXCEPTION, String(err)));
+          return;
+        } finally {
+          done = true;
+          socket.end();
+        }
         if (socketError) {
           return;
         }
 
         // 完成传输
-        resolve(fileInfo);
+        resolve(transferInfo);
       };
 
       proxy.addHandler(proxyHandler);
 
       socket.on('end', () => proxy.removeHandler(proxyHandler));
 
-      socket.on('error', () => {
+      socket.on('error', (err) => {
         socketError = true;
+        console.log('发送文本时 socket 错误', err);
         proxy.removeHandler(proxyHandler);
         reject(JsonResponse.fail(errcode.SOCKET_ERROR, 'socket error'));
+      });
+
+      socket.on('connect', () => {
+        if (process.env.RUNTIME === 'e2e') {
+          console.log('TCP Socket 已建立... 发送 TransferInfo', transferInfo);
+        }
+        proxy.sendBytes(JSON.stringify(transferInfo));
       });
     });
   }
@@ -274,7 +307,7 @@ export class Service implements IService {
   }
 
   addVerifiedDevice(id: string): ServiceInfo[] {
-    const target = this.verifiedServices.find(
+    const target = this.availableServices.find(
       ({ id: targetId }) => id === targetId,
     );
     if (!target) {
@@ -316,19 +349,23 @@ export class Service implements IService {
 
       const { ip: host, port } = target;
 
-      stat(path).then(({ size, isFile }) => {
-        if (!isFile()) {
+      stat(path).then(async (res) => {
+        const { size } = res;
+        if (!res.isFile()) {
           reject(JsonResponse.fail(errcode.BAD_REQUEST, '目标路径不是文件'));
           return;
         }
         // 先发送 TransferInfo
         const transferInfo: TransferInfo = {
-          filename: path.split(divider).pop()!,
-          size,
           batchId,
+          filename: path.split(divider).pop()!,
+          size: res.size,
           type: TransferType.FILE,
           sourceId: this.id,
         };
+
+        console.log('TransferInfo: ', transferInfo);
+        console.log('Target address: ', host, port);
 
         const socket = createConnection({
           port,
@@ -337,82 +374,121 @@ export class Service implements IService {
 
         const proxy = new Protocol(socket);
         let chunk: Buffer = Buffer.alloc(0);
-        let verified = false;
         let socketError = false;
+        let done = false;
 
         const proxyHandler = async ({
           buffer,
           error,
           status,
+          total,
         }: HandlerContext) => {
           // 需要接受一次合法性检验才能开始发送
-          if (verified) {
+          if (done) {
+            if (process.env.RUNTIME === 'e2e') {
+              console.log('接收已结束但仍接收到发包');
+            }
             return;
           }
           if (error) {
+            console.log('接收到错误', error);
             reject(
               JsonResponse.fail(errcode.PROTOCOL_EXCEPTION, error.message),
             );
             socket.end();
             return;
           }
+          chunk = Buffer.concat([chunk, buffer]);
           if (status !== ProtocolStatus.DONE) {
-            chunk = Buffer.concat([chunk, buffer]);
+            if (process.env.RUNTIME === 'e2e') {
+              console.log(
+                '接收 TransferInfo 片段',
+                buffer.length,
+                '总长度: ',
+                total,
+              );
+            }
             return;
           }
 
-          verified = true;
-          const { retcode, errMsg } = JSON.parse(
-            chunk.toString('utf-8'),
-          ) as JsonResponse;
-
-          if (retcode !== 0) {
-            reject(JsonResponse.fail(retcode, errMsg));
+          try {
+            const { retcode, errMsg } = JSON.parse(
+              chunk.toString('utf-8'),
+            ) as JsonResponse;
+            if (retcode !== 0) {
+              if (process.env.RUNTIME === 'e2e') {
+                console.log('目标设备不信任本机', retcode, errMsg);
+              }
+              reject(JsonResponse.fail(retcode, errMsg));
+              socket.end();
+              return;
+            }
+          } catch (err) {
+            console.log('解析信任授权回包时出错', err);
+            reject(JsonResponse.fail(errcode.PROTOCOL_EXCEPTION, String(err)));
+            done = true;
             socket.end();
+            return;
+          } finally {
+            chunk = Buffer.alloc(0);
           }
-          chunk = Buffer.alloc(0);
 
+          console.log('合法性检查通过');
           // 验证通过，开始发送流程
           const startTime = +new Date();
 
           onLaunch?.(transferInfo);
 
-          await proxy.sendBytes(JSON.stringify(transferInfo));
           if (socketError) {
             // 假如在事件循环中出现了 Socket 错误，直接结束流程
             return;
           }
           const readStream = createReadStream(path);
-          proxy.sendStream(readStream, size, {
-            onDone() {
-              resolve({
-                ...transferInfo,
-                cost: (+new Date() - startTime) / 1000,
-              });
-            },
-            onError(err) {
-              reject(
-                JsonResponse.fail(errcode.PROTOCOL_EXCEPTION, err.message),
-              );
-            },
-            onProgress(percent, speed) {
-              onProgress?.({
-                ...transferInfo,
-                progress: percent,
-                speed,
-              });
-            },
-          });
+          try {
+            await proxy.sendStream(readStream, size, {
+              onDone() {
+                resolve({
+                  ...transferInfo,
+                  cost: (+new Date() - startTime) / 1000,
+                });
+              },
+              onError(err) {
+                reject(
+                  JsonResponse.fail(errcode.PROTOCOL_EXCEPTION, err.message),
+                );
+              },
+              onProgress(percent, speed) {
+                onProgress?.({
+                  ...transferInfo,
+                  progress: percent,
+                  speed,
+                });
+              },
+            });
+          } catch (err) {
+            console.log('发送文件时出错', err);
+          } finally {
+            done = true;
+            socket.end();
+          }
         };
 
         proxy.addHandler(proxyHandler);
 
         socket.on('end', () => proxy.removeHandler(proxyHandler));
 
-        socket.on('error', () => {
+        socket.on('error', (err) => {
+          console.log('socket error', err);
           socketError = true;
           proxy.removeHandler(proxyHandler);
           reject(JsonResponse.fail(errcode.SOCKET_ERROR, 'socket error'));
+        });
+
+        socket.on('connect', () => {
+          if (process.env.RUNTIME === 'e2e') {
+            console.log('TCP Socket 已建立... 发送 TransferInfo', transferInfo);
+          }
+          proxy.sendBytes(JSON.stringify(transferInfo));
         });
       });
     });
@@ -478,6 +554,7 @@ export class Service implements IService {
     this.verifiedServices = [];
     this.receiveFileHandlers = new Set();
     this.receiveTextHandlers = new Set();
+    this.availableServicesUpdateHandlers = new Set();
   }
 
   // 初始化 TCP 服务器
@@ -492,20 +569,10 @@ export class Service implements IService {
         const ipSeq = remote.address.split(':');
         remote.address = ipSeq[ipSeq.length - 1];
       }
-      const proxy = new Protocol(socket);
-      if (!this.verifiedServices.find(({ ip }) => ip === remote.address)) {
-        proxy
-          .sendBytes(
-            JsonResponse.fail(errcode.UNAUTHORIZED, '未受信的设备').toJSON(),
-          )
-          .finally(() => {
-            socket.end();
-          });
-        return;
+      if (process.env.RUNTIME === 'e2e') {
+        console.log('Socket connected: ', remote.address, remote.port);
       }
-
-      // 发送校验成功回包
-      await proxy.sendBytes(JsonResponse.ok().toJSON());
+      const proxy = new Protocol(socket);
 
       let transferInfo: TransferInfo | null = null;
       // 上一次至今接收的字节数
@@ -528,6 +595,7 @@ export class Service implements IService {
         const { error, buffer, status, total } = context;
 
         if (error) {
+          console.log('接收文件时出错', error);
           this.receiveFileHandlers.forEach((handler) => {
             handler(
               {} as any,
@@ -535,20 +603,75 @@ export class Service implements IService {
             );
           });
           transferInfo = null;
+          console.log();
           return;
         }
 
         if (!transferInfo) {
+          // 接收TransferInfo时不是流，需要完整接收JSON
+          chunk = Buffer.concat([chunk, buffer]);
           if (status !== ProtocolStatus.DONE) {
-            // 接收TransferInfo时不是流，需要完整接收JSON
-            chunk = Buffer.concat([chunk, buffer]);
+            if (process.env.RUNTIME === 'e2e') {
+              console.log(
+                '接收 TransferInfo 片段',
+                buffer.length,
+                '总长度: ',
+                total,
+              );
+            }
             return;
           }
+          if (process.env.RUNTIME === 'e2e') {
+            console.log('接收 TransferInfo 完毕');
+          }
           try {
+            if (process.env.RUNTIME === 'e2e') {
+              console.log('TransferInfo 原始字符串: ', chunk.toString('utf-8'));
+            }
             transferInfo = JSON.parse(chunk.toString('utf-8'));
+            console.log('TransferInfo: ', transferInfo);
+            if (
+              !this.verifiedServices.find(
+                ({ id }) => id === transferInfo?.sourceId,
+              )
+            ) {
+              if (process.env.RUNTIME === 'e2e') {
+                console.log(
+                  '源 ID 不在受信列表中: ',
+                  transferInfo?.sourceId,
+                  'IP: ',
+                  remote.address,
+                );
+              }
+              proxy
+                .sendBytes(
+                  JsonResponse.fail(
+                    errcode.UNAUTHORIZED,
+                    '未受信的设备',
+                  ).toJSON(),
+                )
+                .finally(() => {
+                  socket.end();
+                });
+              return;
+            }
+            if (process.env.RUNTIME === 'e2e') {
+              console.log(
+                '源 ID 在受信列表中: ',
+                transferInfo?.sourceId,
+                'IP: ',
+                remote.address,
+              );
+            }
+            proxy.sendBytes(JsonResponse.ok().toJSON());
           } catch (err) {
             // 忽略无法解析的JSON
             transferInfo = null;
+            chunk = Buffer.alloc(0);
+            if (process.env.RUNTIME === 'e2e') {
+              console.log('无法解析的 TransferInfo');
+            }
+            socket.end();
             return;
           } finally {
             chunk = Buffer.alloc(0);
@@ -636,7 +759,8 @@ export class Service implements IService {
         proxy.removeHandler(receiveHandler);
       });
 
-      socket.on('error', () => {
+      socket.on('error', (err) => {
+        console.log('Socket error: ', err);
         proxy.removeHandler(receiveHandler);
         if (batchId) {
           this.receiveFileHandlers.forEach((handler) => {
@@ -661,115 +785,136 @@ export class Service implements IService {
     }
 
     // 如果 RUNTIME 是测试，则不开启 TCP 服务
-    this.tcpServer.listen(this.tcpPort, () => {
-      console.log(`TCP Server listening on ${ip.address()}:${this.tcpPort}`);
+    this.tcpServer.listen(this.tcpPort, '0.0.0.0', () => {
+      console.log(
+        `TCP Server listening on ${ip.address('public', 'ipv4')}:${this.tcpPort}`,
+      );
     });
   }
 
   // 初始化 UDP Socket
   private initUdpSocket() {
-    const udpHandler = (buffer: Buffer, rinfo: RemoteInfo) => {
-      // 忽略本机 IP 的发包
-      const localIp = ip.address('public', 'ipv4');
-      if (localIp === rinfo.address) {
-        return;
-      }
-
-      try {
-        // 解析JSON失败会被捕获
-        const message: JsonResponse = JSON.parse(buffer.toString('utf-8'));
-        const { retcode, data, errMsg } = message;
-        const { type, info } = data as {
-          type?: UdpMessage;
-          info?: ServiceInfo;
-        };
-
-        if (retcode !== 0 || errMsg) {
-          // 有错误的回包直接丢弃
+    return new Promise<void>((resolve) => {
+      const udpHandler = (buffer: Buffer, rinfo: RemoteInfo) => {
+        // 忽略本机 IP 的发包
+        const localIp = ip.address('public', 'ipv4');
+        if (localIp === rinfo.address) {
           return;
         }
 
-        switch (type) {
-          case UdpMessage.SEARCH_FOR_AVAILABLE_SERVICE:
-            // 有 Service 在寻找其他可用 Service，回包
-            this.udpSocket.send(
-              JsonResponse.ok({
-                type: UdpMessage.TELL_AVAILABLE_SERVICE,
-                info: {
-                  id: this.id,
-                  name: this.name,
-                  ip: localIp,
-                  port: this.tcpPort,
-                },
-              }).toJSON(),
-            );
-            if (info) {
-              // 将该 Service 作为可用来源
+        console.log(`UDP Socket received from ${rinfo.address}:${rinfo.port}`);
+
+        try {
+          // 解析JSON失败会被捕获
+          const message: JsonResponse = JSON.parse(buffer.toString('utf-8'));
+          const { retcode, data, errMsg } = message;
+          const { type, info } = data as {
+            type?: UdpMessage;
+            info?: ServiceInfo;
+          };
+
+          if (retcode !== 0 || errMsg) {
+            // 有错误的回包直接丢弃
+            return;
+          }
+
+          switch (type) {
+            case UdpMessage.SEARCH_FOR_AVAILABLE_SERVICE:
+              // 有 Service 在寻找其他可用 Service，回包
+              this.udpSocket.send(
+                JsonResponse.ok({
+                  type: UdpMessage.TELL_AVAILABLE_SERVICE,
+                  info: {
+                    id: this.id,
+                    name: this.name,
+                    ip: localIp,
+                    port: this.tcpPort,
+                  },
+                }).toJSON(),
+                rinfo.port,
+                rinfo.address,
+              );
+              if (info) {
+                // 将该 Service 作为可用来源
+                const target = this.availableServices.find(
+                  ({ id }) => id === info.id,
+                );
+                if (!target) {
+                  this.availableServices.push({
+                    id: info.id,
+                    ip: rinfo.address,
+                    port: info.port,
+                    name: info.name,
+                  });
+                  this.availableServicesUpdateHandlers.forEach((handler) => {
+                    handler();
+                  });
+                }
+              }
+              break;
+            case UdpMessage.SERVICE_DEAD:
+              // 远程服务挂了，把他的可用记录删了
+              this.availableServices = this.availableServices.filter(
+                ({ ip }) => ip !== rinfo.address,
+              );
+              this.availableServicesUpdateHandlers.forEach((handler) => {
+                handler();
+              });
+              this.verifiedServices = this.verifiedServices.filter(
+                ({ ip }) => ip !== rinfo.address,
+              );
+              break;
+            case UdpMessage.TELL_AVAILABLE_SERVICE:
+              // 有新的可用 Service，添加可用记录
+              if (!info) {
+                // 无效包，丢弃
+                break;
+              }
+              // eslint-disable-next-line no-case-declarations
               const target = this.availableServices.find(
                 ({ id }) => id === info.id,
               );
               if (!target) {
-                this.availableServices.push(info);
+                this.availableServices.push({
+                  id: info.id,
+                  ip: rinfo.address,
+                  port: info.port,
+                  name: info.name,
+                });
                 this.availableServicesUpdateHandlers.forEach((handler) => {
                   handler();
                 });
+              } else {
+                // 使用引用更新一波已有的记录
+                target.ip = rinfo.address;
+                target.port = info.port;
+                target.name = info.name;
               }
-            }
-            break;
-          case UdpMessage.SERVICE_DEAD:
-            // 远程服务挂了，把他的可用记录删了
-            this.availableServices = this.availableServices.filter(
-              ({ ip }) => ip !== rinfo.address,
-            );
-            this.availableServicesUpdateHandlers.forEach((handler) => {
-              handler();
-            });
-            this.verifiedServices = this.verifiedServices.filter(
-              ({ ip }) => ip !== rinfo.address,
-            );
-            break;
-          case UdpMessage.TELL_AVAILABLE_SERVICE:
-            // 有新的可用 Service，添加可用记录
-            if (!info) {
-              // 无效包，丢弃
               break;
-            }
-            // eslint-disable-next-line no-case-declarations
-            const target = this.availableServices.find(
-              ({ id }) => id === info.id,
-            );
-            if (!target) {
-              this.availableServices.push(info);
-              this.availableServicesUpdateHandlers.forEach((handler) => {
-                handler();
-              });
-            } else {
-              // 使用引用更新一波已有的记录
-              target.ip = info.ip;
-              target.port = info.port;
-              target.name = info.name;
-            }
-            break;
-          default:
+            default:
+          }
+        } catch (err) {
+          console.log(
+            `[${new Date().toLocaleTimeString()}] Udp Socket parse data failed, Remote IP: ${rinfo.address}`,
+            err,
+          );
         }
-      } catch (err) {
-        console.log(
-          `[${new Date().toLocaleTimeString()}] Udp Socket parse data failed, Remote IP: ${rinfo.address}`,
-          err,
-        );
-      }
-    };
+      };
 
-    this.udpSocket = createUdpSocket('udp4', udpHandler.bind(this));
-    // 如果 RUNTIME 是测试，则不开启 UDP 服务
-    if (process.env.RUNTIME === 'test') {
-      return;
-    }
-    // UDP 只能使用熟知端口 86
-    this.udpSocket.bind(86, () => {
-      console.log(`UDP Server listening on ${ip.address()}:86`);
-      // 开启广播收发能力
-      this.udpSocket.setBroadcast(true);
+      this.udpSocket = createUdpSocket('udp4', udpHandler.bind(this));
+      // 如果 RUNTIME 是测试，则不开启 UDP 服务
+      if (process.env.RUNTIME === 'test') {
+        return;
+      }
+      // UDP 只能使用熟知端口 86
+      this.udpSocket.bind(86, () => {
+        console.log(
+          `UDP Server listening on ${ip.address('public', 'ipv4')}:86`,
+        );
+        // 开启广播收发能力
+        this.udpSocket.setBroadcast(true);
+        resolve();
+      });
     });
   }
 }
