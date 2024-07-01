@@ -6,11 +6,11 @@
       <t-button style="flex-shrink: 0" :disabled="serviceName.length === 0" @click="setServiceName">
         修改名称
       </t-button>
-      <t-button style="flex-shrink: 0" theme="default" @click="getServiceName">获取名称</t-button>
     </div>
     <div class="row">
+      <div style="flex-shrink: 0">下载路径：</div>
       <t-input v-model="pathType" placeholder="请选择下载路径" disabled />
-      <t-button style="flex-shrink: 0" @click="openFileDialog">修改下载路径</t-button>
+      <t-button style="flex-shrink: 0" @click="openFileDialog">修改路径</t-button>
     </div>
   </div>
 </template>

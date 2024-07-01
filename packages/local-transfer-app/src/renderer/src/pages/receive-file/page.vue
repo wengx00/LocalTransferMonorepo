@@ -12,7 +12,7 @@
         </div>
         <ul>
           <li
-            v-for="item in nearbyDevices"
+            v-for="item in serviceInfo.nearbyDevices"
             :key="item.devid"
             :class="{ selected: selectedNearbyDevice.devid === item.devid }"
             @click="selectNearbyDevice(item)"
@@ -56,7 +56,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import macAct from '../../assets/image/macAct.png';
 import mac from '../../assets/image/mac.png';
 import windows from '../../assets/image/windows.png';
@@ -64,7 +64,9 @@ import windowsAct from '../../assets/image/windowsAct.png';
 import linuxAct from '../../assets/image/linuxAct.png';
 import linux from '../../assets/image/linux.png';
 import refreshAct from '../../assets/image/refreshAct.png';
-
+import serviceApi from '@renderer/apis/service';
+import { useServiceInfo } from '@renderer/utils/store/service-info';
+const serviceInfo = useServiceInfo();
 const images = {
   macAct,
   mac,
@@ -80,45 +82,7 @@ const getImage = (item) => {
   return images[item.devtype];
 };
 
-const nearbyDevices = ref([
-  {
-    devname: '想喝益力多的mac',
-    devtype: 'mac',
-    devid: '123456789',
-    isSign: true,
-    deviceTrust: true
-  },
-  {
-    devname: 'pwq的Windows',
-    devtype: 'windows',
-    devid: '22222222222',
-    isSign: true,
-    deviceTrust: true
-  },
-  {
-    devname: 'linux',
-    devtype: 'linux',
-    devid: '222122',
-    isSign: true,
-    deviceTrust: false
-  },
-  {
-    devname: '不知道',
-    devtype: 'windows',
-    devid: '2222872222222',
-    isSign: false,
-    deviceTrust: true
-  },
-  {
-    devname: '未知',
-    devtype: 'linux',
-    devid: '2223732322',
-    isSign: false,
-    deviceTrust: true
-  }
-]);
-
-const selectedNearbyDevice = ref(nearbyDevices.value[0]);
+const selectedNearbyDevice = ref(serviceInfo.nearbyDevices[0]);
 const selectedDevice = ref(selectedNearbyDevice.value);
 
 const selectNearbyDevice = (device) => {
@@ -126,20 +90,44 @@ const selectNearbyDevice = (device) => {
   selectedDevice.value = device;
 };
 
-const trustDevice = () => {
-  selectedDevice.value.deviceTrust = !selectedDevice.value.deviceTrust;
+const trustDevice = async () => {
+  if (!selectedDevice.value.deviceTrust) {
+    await serviceApi.invoke.addVerifiedDevice(selectedNearbyDevice.value.devid);
+  } else {
+    await serviceApi.invoke.removeVerifiedDevice(selectedNearbyDevice.value.devid);
+  }
+  await refreshNearbyDevices();
 };
 
 const refreshing = ref(false);
 
 const refreshNearbyDevices = async () => {
   refreshing.value = true;
-  // 调用接口或重新获取附近设备列表的数据
-  // 这里假设需要等待一段时间来模拟异步操作
-  await new Promise((resolve) => setTimeout(resolve, 2000));
-  console.log('refresh nearby devices');
-  refreshing.value = false; // 停止旋转
+  try {
+    const Devices = await serviceApi.invoke.getAvailableServices();
+    const trustedDevices = await serviceApi.invoke.getVerifiedDevices();
+    const tempDevices = Devices.map((item) => ({
+      devname: item.name,
+      devtype: 'mac', // 假设 Devices 中有 type 属性
+      devid: item.id,
+      isSign: false, // 假设 Devices 中有 isSign 属性
+      deviceTrust: trustedDevices.some((trusted) => trusted.id === item.id)
+    }));
+    serviceInfo.nearbyDevices = tempDevices;
+    if (serviceInfo.nearbyDevices.length > 0) {
+      selectedNearbyDevice.value = serviceInfo.nearbyDevices[0];
+      selectedDevice.value = serviceInfo.nearbyDevices[0];
+    }
+  } catch (err) {
+    console.error('Failed to refresh nearby devices', err);
+  } finally {
+    refreshing.value = false;
+  }
 };
+
+onMounted(() => {
+  refreshNearbyDevices();
+});
 </script>
 
 <style scoped>
