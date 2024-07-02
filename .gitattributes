@@ -1,0 +1,2 @@
+# 当 pnpm-lock.yaml 出现冲突时，将以当前分支为准
+pnpm-lock.yaml               merge=ours
