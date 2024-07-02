@@ -103,26 +103,27 @@ const refreshing = ref(false);
 
 const refreshNearbyDevices = async () => {
   refreshing.value = true;
-  try {
-    const Devices = await serviceApi.invoke.getAvailableServices();
-    const trustedDevices = await serviceApi.invoke.getVerifiedDevices();
-    const tempDevices = Devices.map((item) => ({
-      devname: item.name,
-      devtype: 'mac', // 假设 Devices 中有 type 属性
-      devid: item.id,
-      isSign: false, // 假设 Devices 中有 isSign 属性
-      deviceTrust: trustedDevices.some((trusted) => trusted.id === item.id)
-    }));
-    serviceInfo.nearbyDevices = tempDevices;
-    if (serviceInfo.nearbyDevices.length > 0) {
-      selectedNearbyDevice.value = serviceInfo.nearbyDevices[0];
-      selectedDevice.value = serviceInfo.nearbyDevices[0];
-    }
-  } catch (err) {
-    console.error('Failed to refresh nearby devices', err);
-  } finally {
-    refreshing.value = false;
-  }
+  // try {
+  //   const Devices = await serviceApi.invoke.getAvailableServices();
+  //   const trustedDevices = await serviceApi.invoke.getVerifiedDevices();
+  //   const tempDevices = Devices.map((item) => ({
+  //     devname: item.name,
+  //     devtype: 'mac', // 假设 Devices 中有 type 属性
+  //     devid: item.id,
+  //     isSign: false, // 假设 Devices 中有 isSign 属性
+  //     deviceTrust: trustedDevices.some((trusted) => trusted.id === item.id)
+  //   }));
+  //   serviceInfo.nearbyDevices = tempDevices;
+  //   if (serviceInfo.nearbyDevices.length > 0) {
+  //     selectedNearbyDevice.value = serviceInfo.nearbyDevices[0];
+  //     selectedDevice.value = serviceInfo.nearbyDevices[0];
+  //   }
+  // } catch (err) {
+  //   console.error('Failed to refresh nearby devices', err);
+  // } finally {
+  //   refreshing.value = false;
+  // }
+  refreshing.value = false;
 };
 
 onMounted(() => {
