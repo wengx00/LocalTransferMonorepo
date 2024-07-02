@@ -12,7 +12,14 @@
     </div>
     <div class="receive-file">
       <div class="device-info">
-        附近设备
+        <div class="refresh-button">
+          <p>选择发送的设备</p>
+          <img
+            :class="refreshing ? 'refresh rotate' : 'notRefresh'"
+            :src="refreshAct"
+            @click="refreshNearbyDevices"
+          />
+        </div>
         <div class="recent-receive">
           <t-checkbox-group v-model="selectedDevices">
             <ul>
@@ -42,14 +49,14 @@
                 active: dragOver
               }
             ]"
+            @click="openFileDialog"
             @drop="handleDropFile"
             @dragover="handleDragOver"
             @dragleave="handleDragLeave"
           >
-            将文件拖拽至此
+            点击选择或将文件拖拽至此
           </div>
           <t-col class="sendFile-button">
-            <t-button @click="openFileDialog">打开文件选择框</t-button>
             <t-button theme="primary" @click="sendFile">发送</t-button>
           </t-col>
         </div>
@@ -57,11 +64,13 @@
         <div v-if="isTransferTextDialogVisible" class="root">
           <t-textarea
             v-model="textToTransfer"
+            :autosize="{ minRows: 12, maxRow: 12 }"
+            style="height: 50px"
             class="textareaBox"
             placeholder="请输入要传输的文本"
             :maxlength="5000"
           />
-          <t-col class="sendFile-button" :offset="9">
+          <t-col class="sendFile-button">
             <t-button theme="primary" @click="transferText">发送</t-button>
           </t-col>
         </div>
@@ -81,7 +90,9 @@ import windows from '../../assets/image/windows.png';
 import windowsAct from '../../assets/image/windowsAct.png';
 import linuxAct from '../../assets/image/linuxAct.png';
 import linux from '../../assets/image/linux.png';
-
+import refreshAct from '../../assets/image/refreshAct.png';
+import { useServiceInfo } from '@renderer/utils/store/service-info';
+const serviceInfo = useServiceInfo();
 const images = {
   macAct,
   mac,
@@ -104,27 +115,7 @@ const textToTransfer = ref('');
 const selectedFilePaths = ref<string[]>([]);
 const selectedDevices = ref<string[]>([]);
 
-const nearbyDevices = ref([
-  {
-    devname: '想喝益力多的mac',
-    devtype: 'mac',
-    devid: '123456789',
-    isSign: true
-  },
-  {
-    devname: 'pwq的Windows',
-    devtype: 'windows',
-    devid: '22222222222',
-    isSign: true
-  },
-  {
-    devname: 'linux',
-    devtype: 'linux',
-    devid: '222333333222',
-    isSign: true
-  }
-]);
-
+const nearbyDevices = ref(serviceInfo.nearbyDevices);
 const showUploadFileDialog = () => {
   isUploadFileDialogVisible.value = true;
   isTransferTextDialogVisible.value = false;
@@ -239,6 +230,16 @@ function sendFile() {
     content: `文件发送成功到设备：${selectedDevices.value.join(', ')}`
   });
 }
+
+// 刷新设备列表
+const refreshing = ref(false);
+
+const refreshNearbyDevices = async () => {
+  refreshing.value = true;
+  await serviceInfo.initInfo();
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  refreshing.value = false; // 停止旋转
+};
 </script>
 
 <style scoped>
@@ -249,7 +250,8 @@ function sendFile() {
 
 .sendFile-button {
   display: flex;
-  width: 100%;
+  flex-shrink: 0;
+  margin-left: auto;
   justify-content: space-between;
   font-size: 16px;
 }
@@ -365,6 +367,41 @@ function sendFile() {
   height: auto;
 }
 
+.refresh-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.notRefresh,
+.refresh {
+  width: 20px;
+  height: 20px;
+  margin-right: 10px;
+}
+
+.refresh {
+  transition: transform 2s ease-out;
+}
+
+.rotate {
+  animation: rotate 2s linear infinite;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(1080deg);
+  }
+}
+
+.refresh-button p {
+  font-weight: 700;
+}
+
 .root {
   display: flex;
   flex-direction: column;
@@ -382,6 +419,7 @@ function sendFile() {
   }
 
   .drag-area {
+    cursor: pointer;
     display: flex;
     justify-content: center;
     align-items: center;

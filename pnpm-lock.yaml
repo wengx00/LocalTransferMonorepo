@@ -95,6 +95,9 @@ importers:
       pinia:
         specifier: ^2.1.7
         version: 2.1.7(typescript@5.4.5)(vue@3.4.27)
+      tdesign-icons-vue-next:
+        specifier: ^0.2.2
+        version: 0.2.2(vue@3.4.27)
       tdesign-vue-next:
         specifier: ^1.9.6
         version: 1.9.6(vue@3.4.27)
