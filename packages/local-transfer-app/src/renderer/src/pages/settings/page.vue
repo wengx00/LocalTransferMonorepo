@@ -24,6 +24,10 @@ import { ref, onMounted } from 'vue';
 const serviceInfo = useServiceInfo();
 const pathType = ref('downloads');
 const serviceName = ref('');
+onMounted(async () => {
+  getTargetPath();
+  getServiceName();
+});
 // 获取目标目录路径
 async function getTargetPath() {
   const localPath = localStorage.getItem('pathType');
@@ -34,16 +38,12 @@ async function getTargetPath() {
   try {
     const path = await nativeApi.invoke.getPath('downloads');
     pathType.value = path;
+    localStorage.setItem('pathType', path);
   } catch (err) {
     console.log(err);
     interact.message.error(String(err));
   }
 }
-
-onMounted(async () => {
-  getTargetPath();
-  getServiceName();
-});
 
 // 修改设备名称
 function setServiceName() {

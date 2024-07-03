@@ -8,13 +8,13 @@ export const useServiceInfo = defineStore('service-info', () => {
   // Service ID
   const serviceId = ref('');
 
-  // 从 ServiceAPI 刷新信息
+  // 从 ServiceAPI 初始化设备信息
   async function initInfo() {
     await Promise.all([
       (serviceName.value = await serviceApi.invoke.getName()),
       (serviceId.value = await serviceApi.invoke.getId())
     ]).finally(() => {
-      console.log('刷新设备信息');
+      console.log('初始化设备信息');
     });
   }
 

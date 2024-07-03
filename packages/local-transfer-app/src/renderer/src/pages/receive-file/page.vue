@@ -29,26 +29,26 @@
     </div>
     <div class="device-detail">
       <div class="deviceInfo">
-        <p class="device-detail-name">{{ selectedDevice.devname }}</p>
+        <p class="device-detail-name">{{ selectedDevice?.devname || '无设备' }}</p>
       </div>
       <div class="device-status">
         <img
-          v-if="selectedDevice.isSign"
+          v-if="selectedDevice?.isSign"
           class="computer"
           src="../../assets/image/File.png"
           alt="File"
         />
         <img
-          v-if="!selectedDevice.isSign"
+          v-if="!selectedDevice?.isSign"
           class="computer"
           src="../../assets/image/noNetork.png"
           alt="noNetork"
         />
-        <p>{{ selectedDevice.isSign ? '设备在线' : '设备离线' }}</p>
+        <p>{{ selectedDevice?.isSign ? '设备在线' : '设备离线' }}</p>
       </div>
       <t-col class="sendFile-button">
         <button class="receive-button" @click="trustDevice">
-          {{ selectedDevice.deviceTrust ? '解除信任' : '信任设备' }}
+          {{ selectedDevice?.deviceTrust ? '解除信任' : '信任设备' }}
         </button>
       </t-col>
     </div>
@@ -65,8 +65,19 @@ import linuxAct from '../../assets/image/linuxAct.png';
 import linux from '../../assets/image/linux.png';
 import refreshAct from '../../assets/image/refreshAct.png';
 import serviceApi from '@renderer/apis/service';
+import nativeApi from '@renderer/apis/native';
+import interact from '@renderer/utils/interact';
 import { useServiceInfo } from '@renderer/utils/store/service-info';
+import { useReceiveController } from '@renderer/utils/store/receive-controller';
+
 const serviceInfo = useServiceInfo();
+const receiveController = useReceiveController();
+
+const pathType = ref('downloads');
+const selectedNearbyDevice = ref(serviceInfo.nearbyDevices[0]);
+const selectedDevice = ref(selectedNearbyDevice.value);
+const refreshing = ref(false);
+
 const images = {
   macAct,
   mac,
@@ -75,15 +86,13 @@ const images = {
   linuxAct,
   linux
 };
+
 const getImage = (item) => {
   if (item.isSign) {
     return images[`${item.devtype}Act`];
   }
   return images[item.devtype];
 };
-
-const selectedNearbyDevice = ref(serviceInfo.nearbyDevices[0]);
-const selectedDevice = ref(selectedNearbyDevice.value);
 
 const selectNearbyDevice = (device) => {
   selectedNearbyDevice.value = device;
@@ -96,38 +105,61 @@ const trustDevice = async () => {
   } else {
     await serviceApi.invoke.removeVerifiedDevice(selectedNearbyDevice.value.devid);
   }
-  await refreshNearbyDevices();
+  await initNearbyDevices();
 };
-
-const refreshing = ref(false);
 
 const refreshNearbyDevices = async () => {
   refreshing.value = true;
-  // try {
-  //   const Devices = await serviceApi.invoke.getAvailableServices();
-  //   const trustedDevices = await serviceApi.invoke.getVerifiedDevices();
-  //   const tempDevices = Devices.map((item) => ({
-  //     devname: item.name,
-  //     devtype: 'mac', // 假设 Devices 中有 type 属性
-  //     devid: item.id,
-  //     isSign: false, // 假设 Devices 中有 isSign 属性
-  //     deviceTrust: trustedDevices.some((trusted) => trusted.id === item.id)
-  //   }));
-  //   serviceInfo.nearbyDevices = tempDevices;
-  //   if (serviceInfo.nearbyDevices.length > 0) {
-  //     selectedNearbyDevice.value = serviceInfo.nearbyDevices[0];
-  //     selectedDevice.value = serviceInfo.nearbyDevices[0];
-  //   }
-  // } catch (err) {
-  //   console.error('Failed to refresh nearby devices', err);
-  // } finally {
-  //   refreshing.value = false;
-  // }
-  refreshing.value = false;
+  await initNearbyDevices();
+  setTimeout(() => {
+    refreshing.value = false;
+  }, 1500);
 };
 
+const initNearbyDevices = async () => {
+  try {
+    const Devices = await serviceApi.invoke.getAvailableServices();
+    const trustedDevices = await serviceApi.invoke.getVerifiedDevices();
+    const tempDevices = Devices.map((item) => ({
+      devname: item.name || '未知设备',
+      devtype: 'mac', // 这里需要返回设备类型
+      devid: item.id || '',
+      isSign: true,
+      deviceTrust: trustedDevices.some((trusted) => trusted.id === item.id)
+    }));
+    serviceInfo.nearbyDevices = tempDevices;
+    console.log('设备列表', tempDevices);
+    if (serviceInfo.nearbyDevices.length > 0) {
+      selectedNearbyDevice.value = serviceInfo.nearbyDevices[0];
+      selectedDevice.value = serviceInfo.nearbyDevices[0];
+    }
+  } catch (err) {
+    console.error('Failed to refresh nearby devices', err);
+  }
+};
+
+// 获取目标目录路径
+async function getTargetPath() {
+  const localPath = localStorage.getItem('pathType');
+  if (localPath) {
+    pathType.value = localPath;
+    console.log(localPath);
+    return;
+  }
+  try {
+    const path = await nativeApi.invoke.getPath('downloads');
+    pathType.value = path;
+    localStorage.setItem('pathType', path);
+  } catch (err) {
+    console.log(err);
+    interact.message.error(String(err));
+  }
+}
+
 onMounted(() => {
-  refreshNearbyDevices();
+  initNearbyDevices();
+  getTargetPath();
+  receiveController.initialize();
 });
 </script>
 
@@ -197,11 +229,11 @@ onMounted(() => {
 }
 
 .refresh {
-  transition: transform 2s ease-out;
+  transition: transform 1.5s ease-out;
 }
 
 .rotate {
-  animation: rotate 2s linear infinite;
+  animation: rotate 1.5s linear infinite;
 }
 
 @keyframes rotate {

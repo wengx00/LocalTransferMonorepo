@@ -2,11 +2,11 @@
   <div class="send-file">
     <div class="transfer">
       <t-button theme="primary" class="transfer-button" @click="showUploadFileDialog">
-        <template #icon><cloud-upload-icon /></template>
+        <template #icon><CloudUploadIcon /></template>
         上传文件
       </t-button>
       <t-button theme="primary" class="transfer-button" @click="showTransferTextDialog">
-        <template #icon><cloud-upload-icon /></template>
+        <template #icon><CloudUploadIcon /></template>
         上传文本
       </t-button>
     </div>
@@ -24,7 +24,7 @@
           <t-checkbox-group v-model="selectedDevices">
             <ul>
               <li
-                v-for="item in nearbyDevices"
+                v-for="item in serviceInfo.nearbyDevices"
                 :key="item.devid"
                 :class="{ selected: selectedDevices.includes(item.devid) }"
               >
@@ -50,14 +50,14 @@
               }
             ]"
             @click="openFileDialog"
-            @drop="handleDropFile"
-            @dragover="handleDragOver"
+            @drop.prevent="handleDropFile"
+            @dragover.prevent="handleDragOver"
             @dragleave="handleDragLeave"
           >
             点击选择或将文件拖拽至此
           </div>
           <t-col class="sendFile-button">
-            <t-button theme="primary" @click="sendFile">发送</t-button>
+            <t-button theme="primary" @click="sendFileToDevice">发送</t-button>
           </t-col>
         </div>
 
@@ -83,6 +83,8 @@
 import { ref, onMounted } from 'vue';
 import nativeApi from '@renderer/apis/native';
 import interact from '@renderer/utils/interact';
+import serviceApi from '@renderer/apis/service';
+import { CloudUploadIcon } from 'tdesign-icons-vue-next';
 
 import macAct from '../../assets/image/macAct.png';
 import mac from '../../assets/image/mac.png';
@@ -92,7 +94,10 @@ import linuxAct from '../../assets/image/linuxAct.png';
 import linux from '../../assets/image/linux.png';
 import refreshAct from '../../assets/image/refreshAct.png';
 import { useServiceInfo } from '@renderer/utils/store/service-info';
+import { useSendController } from '@renderer/utils/store/send-controller';
+
 const serviceInfo = useServiceInfo();
+const sendController = useSendController();
 const images = {
   macAct,
   mac,
@@ -101,6 +106,7 @@ const images = {
   linuxAct,
   linux
 };
+
 const getImage = (item) => {
   if (item.isSign) {
     return images[`${item.devtype}Act`];
@@ -115,7 +121,6 @@ const textToTransfer = ref('');
 const selectedFilePaths = ref<string[]>([]);
 const selectedDevices = ref<string[]>([]);
 
-const nearbyDevices = ref(serviceInfo.nearbyDevices);
 const showUploadFileDialog = () => {
   isUploadFileDialogVisible.value = true;
   isTransferTextDialogVisible.value = false;
@@ -131,32 +136,37 @@ onMounted(() => {
 
 // 打开文件选择框
 async function openFileDialog() {
-  const result = await nativeApi.invoke.openFileDialog({
-    title: '选择文件',
-    buttonLabel: '选择',
-    filters: [
-      {
-        name: 'C++源文件',
-        extensions: ['.cpp', '.cc', '.h', '.hpp']
+  try {
+    const result = await nativeApi.invoke.openFileDialog({
+      title: '选择文件',
+      buttonLabel: '选择',
+      filters: [
+        {
+          name: '所有文件',
+          extensions: ['*']
+        }
+      ],
+      properties: {
+        openFile: true,
+        openDirectory: false,
+        multiSelections: true
       }
-    ],
-    properties: {
-      openFile: true,
-      openDirectory: true,
-      multiSelections: true
+    });
+
+    if (!result) {
+      interact.message.warning('用户取消选择');
+      return;
     }
-  });
 
-  if (!result) {
-    interact.message.warning('用户取消选择');
-    return;
-  }
-
-  selectedFilePaths.value = result || [];
-  if (selectedFilePaths.value.length === 0) {
-    interact.message.warning('未选择任何文件');
-  } else {
-    interact.message.success('文件选择成功');
+    selectedFilePaths.value = result || [];
+    if (selectedFilePaths.value.length === 0) {
+      interact.message.warning('未选择任何文件');
+    } else {
+      interact.message.success('文件选择成功');
+      console.log('选择文件路径', selectedFilePaths);
+    }
+  } catch (error) {
+    interact.message.error(`文件选择失败: ${error}`);
   }
 }
 
@@ -174,6 +184,8 @@ function handleDropFile(e: DragEvent) {
   for (const file of files) {
     fileList.push(file.path);
   }
+
+  selectedFilePaths.value = fileList;
 
   if (fileList.length === 0) {
     interact.message.error('未选择任何文件');
@@ -213,8 +225,8 @@ function transferText() {
   }
 }
 
-// 发送文件
-function sendFile() {
+// 发送文件到设备
+async function sendFileToDevice() {
   if (selectedDevices.value.length === 0) {
     interact.message.error('请选择一个设备');
     return;
@@ -225,21 +237,50 @@ function sendFile() {
     return;
   }
 
-  interact.notify.success({
-    title: '发送文件',
-    content: `文件发送成功到设备：${selectedDevices.value.join(', ')}`
-  });
+  for (const filePath of selectedFilePaths.value) {
+    for (const deviceId of selectedDevices.value) {
+      try {
+        await sendController.sendFile(filePath, deviceId);
+        interact.message.success('发送文件成功');
+      } catch (err) {
+        interact.message.error(`发送文件失败: ${err}`);
+      }
+    }
+  }
 }
+
+const refreshNearbyDevices = async () => {
+  refreshing.value = true;
+  await initNearbyDevices();
+  setTimeout(() => {
+    refreshing.value = false;
+  }, 1500);
+};
 
 // 刷新设备列表
 const refreshing = ref(false);
 
-const refreshNearbyDevices = async () => {
-  refreshing.value = true;
-  await serviceInfo.initInfo();
-  await new Promise((resolve) => setTimeout(resolve, 2000));
-  refreshing.value = false; // 停止旋转
+const initNearbyDevices = async () => {
+  try {
+    const Devices = await serviceApi.invoke.getAvailableServices();
+    const trustedDevices = await serviceApi.invoke.getVerifiedDevices();
+    const tempDevices = Devices.map((item) => ({
+      devname: item.name || '未知设备',
+      devtype: 'mac', //这里需要返回设备类型
+      devid: item.id || '',
+      isSign: true,
+      deviceTrust: trustedDevices.some((trusted) => trusted.id === item.id)
+    }));
+    serviceInfo.nearbyDevices = tempDevices;
+    console.log('设备列表', tempDevices);
+  } catch (err) {
+    console.error('Failed to refresh nearby devices', err);
+  }
 };
+
+onMounted(() => {
+  initNearbyDevices();
+});
 </script>
 
 <style scoped>
@@ -381,11 +422,11 @@ const refreshNearbyDevices = async () => {
 }
 
 .refresh {
-  transition: transform 2s ease-out;
+  transition: transform 1.5s ease-out;
 }
 
 .rotate {
-  animation: rotate 2s linear infinite;
+  animation: rotate 1.5s linear infinite;
 }
 
 @keyframes rotate {
