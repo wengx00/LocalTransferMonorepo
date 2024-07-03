@@ -1,5 +1,6 @@
 import { NativeApi } from '@ipc/native';
 import { app, dialog } from 'electron';
+import { type } from 'os';
 
 export default class NativeApiHelper implements IpcMainHelper<NativeApi> {
   handler: NativeApi['invoke'] = {
@@ -23,6 +24,30 @@ export default class NativeApiHelper implements IpcMainHelper<NativeApi> {
             resolve(res.filePaths);
           })
           .catch(reject);
+      });
+    },
+    getPlatform(): Promise<string> {
+      return new Promise((resolve, reject) => {
+        try {
+          const platFormType = type();
+          let device: string;
+          switch (platFormType) {
+            case 'Windows_NT':
+              device = 'Windows';
+              break;
+            case 'Darwin':
+              device = 'macOS';
+              break;
+            case 'Linux':
+              device = 'Linux';
+              break;
+            default:
+              device = 'Windows';
+          }
+          resolve(device);
+        } catch (error) {
+          reject(error);
+        }
       });
     }
   };

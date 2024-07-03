@@ -57,6 +57,11 @@ declare module '@ipc/native' {
        * @returns 目录地址
        */
       getPath(type: PathType): Promise<string>;
+      /**
+       * 获取设备类型
+       * @returns 设备类型
+       */
+      getPlatform(): Promise<string>;
     };
   }
 }

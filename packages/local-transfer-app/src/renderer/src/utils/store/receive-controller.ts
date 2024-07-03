@@ -1,5 +1,8 @@
+import serviceApi from '@renderer/apis/service';
+import { ReceiveFileHandler } from 'local-transfer-service';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
+import interact from '../interact';
 
 export interface ReceiveTask {
   batchId: string;
@@ -8,16 +11,102 @@ export interface ReceiveTask {
   size: number;
   filename: string;
   sourceServiceName: string;
+  // 过期时间
+  expireAfter: number;
 }
 
+// 默认过期时间：5min
+const taskTtl = 5 * 60 * 1000;
+
 export const useReceiveController = defineStore('receive-controller', () => {
+  let initialized = false;
+  let timer: number | null = null;
   // 任务map，O(1) 查询效率
   const taskMap = ref(new Map<string, ReceiveTask>());
 
   // 任务列表
   const taskList = computed(() => taskMap.value.values());
 
+  // 接收文件处理器
+  const receiveFileHandler: ReceiveFileHandler = async (
+    { batchId, speed, progress, size, filename, sourceId, done },
+    error
+  ) => {
+    if (error) {
+      interact.notify.error({
+        title: '接收文件失败',
+        content: `接收${filename}失败，错误信息：${error}`
+      });
+      // 出错时把记录删了
+      taskMap.value.delete(batchId);
+      return;
+    }
+    if (done) {
+      interact.notify.success({
+        title: '接收文件成功',
+        content: `${filename}接收成功`
+      });
+      // 成功时把记录删了
+      taskMap.value.delete(batchId);
+      return;
+    }
+    let record: ReceiveTask | undefined = taskMap.value.get(batchId);
+    if (!record) {
+      const availableServices = await serviceApi.invoke.getAvailableServices();
+      const target = availableServices.find(({ id }) => id === sourceId);
+      record = {
+        batchId,
+        progress,
+        speed,
+        size,
+        filename,
+        sourceServiceName: target?.name || '未知设备',
+        expireAfter: +new Date() + taskTtl
+      };
+      // 新增记录
+      taskMap.value.set(batchId, record);
+      return;
+    }
+    // 已存在记录，更新记录
+    taskMap.value.set(batchId, {
+      ...record,
+      speed,
+      progress,
+      expireAfter: +new Date() + taskTtl // 刷新 TTL
+    });
+  };
+
+  // 定时清理过期任务
+  const clearHandler = () => {
+    const now = +new Date();
+    taskMap.value.forEach((record) => {
+      if (record.expireAfter < now) {
+        taskMap.value.delete(record.batchId);
+      }
+    });
+  };
+
+  // 初始化监听器，只在 App 初始化时执行
+  function initialize() {
+    if (!initialized) {
+      initialized = true;
+      serviceApi.listener.receiveFile(receiveFileHandler);
+      // 注册清理任务，每30s执行一次
+      timer = setInterval(clearHandler, 30 * 1000) as any;
+    }
+  }
+
+  // 析构
+  function dispose() {
+    if (timer) {
+      clearInterval(timer);
+    }
+  }
+
   return {
-    taskList
+    taskList,
+
+    initialize,
+    dispose
   };
 });
