@@ -95,6 +95,11 @@ declare module '@ipc/service' {
        * 刷新可用设备列表
        */
       refresh(): void;
+
+      /**
+       * 关闭设备
+       */
+      dispose(): void;
     };
     listener: {
       receiveFile(handler: ReceiveFileHandler): Promise<void>;

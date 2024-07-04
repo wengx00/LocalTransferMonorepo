@@ -49,6 +49,9 @@ export default class ServiceApiHelper implements IpcMainHelper<ServiceApi> {
     },
     async getDownloadRoot() {
       return service.getDownloadRoot();
+    },
+    async dispose() {
+      return service.dispose();
     }
   };
 }

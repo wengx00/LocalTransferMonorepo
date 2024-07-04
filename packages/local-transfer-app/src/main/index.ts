@@ -46,7 +46,11 @@ function createWindow(): void {
     mainWindow.webContents
   );
   // 注册 Service 监听事件
-  dispose = registerService(service, serviceApi);
+  const unbindListener = registerService(service, serviceApi);
+  dispose = () => {
+    unbindListener();
+    service.dispose();
+  };
 
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
