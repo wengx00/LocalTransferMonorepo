@@ -84,6 +84,9 @@ export interface IService {
   removeAvailableServicesUpdateHandler(
     handler: AvailableServiceUpdateHandler,
   ): void;
+
+  // 关闭服务
+  dispose(): void;
 }
 
 /**
@@ -105,6 +108,25 @@ export class Service implements IService {
       // 启动服务时刷新一次可用列表
       this.refresh();
     });
+  }
+
+  dispose(): void {
+    this.udpSocket.send(
+      JsonResponse.ok({
+        type: UdpMessage.SERVICE_DEAD,
+        info: {
+          id: this.id,
+          name: this.name,
+          ip: ip.address('public', 'ipv4'),
+        },
+      }).toJSON(),
+      86,
+      '255.255.255.255', // 广播
+      () => {
+        this.udpSocket.close();
+      },
+    );
+    this.tcpServer.close();
   }
 
   addAvailableServicesUpdateHandler(
