@@ -20,7 +20,7 @@ export default function makeInstance<T extends IpcApi>(
       const curProp = prop.toString();
       return async (...params: any[]) => {
         try {
-          return await ipcRenderer.invoke(channelName, curProp, ...params);
+          return await ipcRenderer.invoke(channelName, curProp, JSON.stringify(params));
         } catch (err) {
           console.log('[IpcClient] invoke error:', err);
           return Promise.reject(err);
@@ -72,6 +72,6 @@ export default function makeInstance<T extends IpcApi>(
 
   return {
     invoke: new Proxy(invoke, invokeProxyHandler),
-    bind: new Proxy(listener, bindProxyHandler)
-  } as unknown as T;
+    listener: new Proxy(listener, bindProxyHandler)
+  } as T;
 }

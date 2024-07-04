@@ -9,9 +9,9 @@ export default function makeInstance<T extends IpcApi>(
 
   const channelName = `ns-${namespace}-${0}`;
 
-  ipcMain.handle(channelName, async (_event, cmd: string, ...args: any[]) => {
+  ipcMain.handle(channelName, async (_event, cmd: string, args: any) => {
     if (helper.handler[cmd]) {
-      return await helper.handler[cmd](...args);
+      return await helper.handler[cmd](...JSON.parse(args));
     }
   });
 
