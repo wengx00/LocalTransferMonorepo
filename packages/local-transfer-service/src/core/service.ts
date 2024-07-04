@@ -271,6 +271,19 @@ export class Service implements IService {
 
   setName(name: string): void {
     this.name = name;
+    // 通知其他设备
+    this.udpSocket.send(
+      JsonResponse.ok({
+        type: UdpMessage.SERVICE_RENAME,
+        info: {
+          id: this.id,
+          name: this.name,
+          ip: ip.address('public', 'ipv4'),
+        },
+      }).toJSON(),
+      86,
+      '255.255.255.255', // 广播
+    );
   }
 
   setTcpPort(port: number): void {
@@ -495,6 +508,7 @@ export class Service implements IService {
   }
 
   refresh(): void {
+    // 清空可用列表
     this.udpSocket.send(
       JsonResponse.ok({
         type: UdpMessage.SEARCH_FOR_AVAILABLE_SERVICE,
@@ -676,28 +690,29 @@ export class Service implements IService {
           } finally {
             chunk = Buffer.alloc(0);
           }
+          return;
         }
-        if (transferInfo!.type === TransferType.FILE && !writePath) {
+        if (transferInfo.type === TransferType.FILE && !writePath) {
           // batchId和时间戳附加到原始文件名
           writePath = resolve(
             this.downloadRoot,
-            `${transferInfo!.batchId}-${+new Date()}-${transferInfo!.filename}`,
+            `${transferInfo.batchId}-${+new Date()}-${transferInfo.filename}`,
           );
         }
-        if (transferInfo!.type === TransferType.FILE && !writeStream) {
+        if (transferInfo.type === TransferType.FILE && !writeStream) {
           writeStream = createWriteStream(writePath);
         }
 
         writeStream?.write(buffer);
 
         // 接收 TEXT 时直接写入 Buffer
-        if (transferInfo!.type === TransferType.TEXT) {
+        if (transferInfo.type === TransferType.TEXT) {
           chunk = Buffer.concat([chunk, buffer]);
         }
 
         const done = status === ProtocolStatus.DONE;
 
-        if (transferInfo!.type === TransferType.FILE) {
+        if (transferInfo.type === TransferType.FILE) {
           // 只有接收 FILE 时需要回调 onProgress，接收 TEXT 时不需要
           const currentTime = +new Date();
           if (lastReceivedTime === 0) {
@@ -729,7 +744,7 @@ export class Service implements IService {
         if (done) {
           // 已经写入了最后一个buffer
 
-          if (transferInfo!.type === TransferType.TEXT) {
+          if (transferInfo.type === TransferType.TEXT) {
             const text = chunk.toString('utf-8');
 
             this.receiveTextHandlers.forEach((handler) => {
@@ -864,13 +879,12 @@ export class Service implements IService {
                 ({ ip }) => ip !== rinfo.address,
               );
               break;
-            case UdpMessage.TELL_AVAILABLE_SERVICE:
+            case UdpMessage.TELL_AVAILABLE_SERVICE: {
               // 有新的可用 Service，添加可用记录
               if (!info) {
                 // 无效包，丢弃
                 break;
               }
-              // eslint-disable-next-line no-case-declarations
               const target = this.availableServices.find(
                 ({ id }) => id === info.id,
               );
@@ -881,16 +895,41 @@ export class Service implements IService {
                   port: info.port,
                   name: info.name,
                 });
-                this.availableServicesUpdateHandlers.forEach((handler) => {
-                  handler();
-                });
               } else {
                 // 使用引用更新一波已有的记录
                 target.ip = rinfo.address;
                 target.port = info.port;
                 target.name = info.name;
               }
+              this.availableServicesUpdateHandlers.forEach((handler) => {
+                handler();
+              });
               break;
+            }
+            case UdpMessage.SERVICE_RENAME: {
+              if (!info) {
+                return;
+              }
+              const target = this.availableServices.find(
+                ({ id }) => id === info.id,
+              );
+              if (!target) {
+                this.availableServices.push({
+                  id: info.id,
+                  ip: rinfo.address,
+                  port: info.port,
+                  name: info.name,
+                });
+              } else {
+                target.ip = rinfo.address;
+                target.port = info.port;
+                target.name = info.name;
+              }
+              this.availableServicesUpdateHandlers.forEach((handler) => {
+                handler();
+              });
+              break;
+            }
             default:
           }
         } catch (err) {
