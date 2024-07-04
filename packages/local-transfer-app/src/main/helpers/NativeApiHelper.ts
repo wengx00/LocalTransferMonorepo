@@ -1,6 +1,6 @@
 import { NativeApi } from '@ipc/native';
 import { app, dialog } from 'electron';
-import { type } from 'os';
+import { type, hostname } from 'os';
 
 export default class NativeApiHelper implements IpcMainHelper<NativeApi> {
   handler: NativeApi['invoke'] = {
@@ -42,13 +42,23 @@ export default class NativeApiHelper implements IpcMainHelper<NativeApi> {
               device = 'Linux';
               break;
             default:
-              device = 'Windows';
+              device = 'PC';
           }
           resolve(device);
         } catch (error) {
           reject(error);
         }
       });
+    },
+    async getHostname() {
+      return hostname();
+    },
+    async getRuntime() {
+      return process.env.RUNTIME || 'production';
+    },
+    async setRuntime(value) {
+      process.env.RUNTIME = value;
+      return Promise.resolve();
     }
   };
 }

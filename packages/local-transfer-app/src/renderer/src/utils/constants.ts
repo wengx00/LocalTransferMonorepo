@@ -3,5 +3,6 @@ export default {
   appSlogan: import.meta.env.VITE_APP_SLOGAN,
   base: import.meta.env.VITE_BASE,
   mobileLayoutBreakpoint: Number(import.meta.env.VITE_MOBILE_LAYOUT_BREAKPOINT || '480'),
-  apiPrefix: import.meta.env.VITE_API_PREFIX
+  apiPrefix: import.meta.env.VITE_API_PREFIX,
+  contributor: import.meta.env.VITE_CONTRIBUTOR
 };

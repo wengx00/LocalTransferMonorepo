@@ -13,6 +13,7 @@ interface ImportMetaEnv {
   readonly VITE_BASE: string;
   readonly VITE_MOBILE_LAYOUT_BREAKPOINT: string;
   readonly VITE_API_PREFIX: string;
+  readonly VITE_CONTRIBUTOR: string;
 }
 
 interface ImportMeta {

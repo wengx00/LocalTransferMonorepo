@@ -10,14 +10,17 @@ import TDesign from 'tdesign-vue-next';
 import '@assets/styles/reset.scss';
 import '@assets/styles/theme.css';
 import { useReceiveController } from './utils/store/receive-controller';
+import { useServiceInfo } from './utils/store/service-info';
 
 const pinia = createPinia();
 
 createApp(App).use(pinia).use(router).use(TDesign).mount('#app');
 
 const appConfig = useAppConfig();
+const serviceInfo = useServiceInfo();
 const receiveController = useReceiveController();
 
+serviceInfo.initInfo();
 receiveController.initialize();
 
 window.addEventListener('beforeunload', () => {

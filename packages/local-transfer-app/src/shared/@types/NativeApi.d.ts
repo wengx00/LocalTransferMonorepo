@@ -62,6 +62,20 @@ declare module '@ipc/native' {
        * @returns 设备类型
        */
       getPlatform(): Promise<string>;
+      /**
+       * 获取本机用户名
+       * @returns 用户名
+       */
+      getHostname(): Promise<string>;
+      /**
+       * 获取本地运行时
+       * @returns 运行时
+       */
+      getRuntime(): Promise<string>;
+      /**
+       * 设置本地运行时
+       */
+      setRuntime(value: string): Promise<void>;
     };
   }
 }

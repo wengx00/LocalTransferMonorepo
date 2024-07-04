@@ -531,6 +531,10 @@ export class Service implements IService {
 
   refresh(): void {
     // 清空可用列表
+    this.availableServices = [];
+    this.availableServicesUpdateHandlers.forEach((handler) => {
+      handler();
+    });
     this.udpSocket.send(
       JsonResponse.ok({
         type: UdpMessage.SEARCH_FOR_AVAILABLE_SERVICE,
