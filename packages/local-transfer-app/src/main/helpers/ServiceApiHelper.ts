@@ -45,7 +45,7 @@ export default class ServiceApiHelper implements IpcMainHelper<ServiceApi> {
         return service.getVerifiedDevices();
       },
       sendFile(request) {
-        const channelName = `ns-${namespace}-${0}`;
+        const channelName = `ns-${namespace.service}-${0}`;
         return service.sendFile({
           ...request,
           onLaunch(context) {

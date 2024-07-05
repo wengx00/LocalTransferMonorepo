@@ -160,7 +160,7 @@ function airdrop() {
   });
   // 清空选中的文件
   filePaths.value = [];
-  interact.notify.success({
+  interact.dialog({
     title: '开始隔空投送',
     content: '投送进度可在“火箭🚀面板”查看'
   });

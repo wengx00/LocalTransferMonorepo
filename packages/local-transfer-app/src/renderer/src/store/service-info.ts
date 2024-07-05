@@ -65,6 +65,13 @@ export const useServiceInfo = defineStore('service-info', () => {
     interact.message.success('授权成功');
   }
 
+  // 取消授权
+  async function unauthorize(targetId: string) {
+    await serviceApi.invoke.removeVerifiedDevice(targetId);
+    verifiedServices.value = await serviceApi.invoke.getVerifiedDevices();
+    interact.message.success('取消授权成功');
+  }
+
   // 设置 Service 名称
   async function setServiceName(name: string) {
     await serviceApi.invoke.setName(name);
@@ -89,6 +96,7 @@ export const useServiceInfo = defineStore('service-info', () => {
     initInfo,
     setServiceName,
     setDownloadRoot,
-    authorize
+    authorize,
+    unauthorize
   };
 });

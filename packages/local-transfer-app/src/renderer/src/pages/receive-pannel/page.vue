@@ -17,14 +17,14 @@
         </template>
         <EmptyList v-if="serviceList.length === 0" title="暂无可用设备" />
         <transition-group v-else name="list" tag="div" class="content">
-          <ListTile v-for="item in serviceList" :key="item.id">
+          <ListTile v-for="(item, index) in serviceList" :key="item.id">
             <div class="content-primary">
               <div class="name">{{ item.name }}</div>
               <t-button
                 variant="outline"
                 :theme="item.verified ? 'success' : 'warning'"
                 size="small"
-                @click="serviceInfo.authorize(item.id)"
+                @click="toggleAuthorization(index)"
                 >{{ item.verified ? '已信任' : '未信任' }}</t-button
               >
             </div>
@@ -146,6 +146,16 @@ async function refresh() {
     interact.message.success('设备列表刷新成功');
   } catch {
     interact.message.error('设备列表刷新失败，请稍后重试');
+  }
+}
+
+// 切换授权
+async function toggleAuthorization(index: number) {
+  const target = serviceList.value[index];
+  if (target.verified) {
+    serviceInfo.unauthorize(target.id);
+  } else {
+    serviceInfo.authorize(target.id);
   }
 }
 

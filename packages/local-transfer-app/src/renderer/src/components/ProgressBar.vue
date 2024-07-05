@@ -10,10 +10,11 @@
       ></div>
     </div>
     <div class="progress-bar_info">
-      <div class="progress-bar_info_target">To：{{ targetName }}</div>
+      <div class="progress-bar_info_target">{{ targetName }}</div>
       <div v-if="speed !== undefined" class="progress-bar_info_speed">
-        速度：{{ speed || 0 }} KB/s
+        速度：{{ speed || 0 }} MB/s
       </div>
+      <div class="progress-bar_percent">{{ progress }}%</div>
     </div>
   </div>
 </template>
@@ -32,9 +33,7 @@ const props = withDefaults(
     speed?: number;
   }>(),
   {
-    progress: 0,
-    speed: 0,
-    total: 0
+    progress: 0
   }
 );
 
@@ -81,6 +80,7 @@ const targetName = computed(
     width: 100%;
     font-size: 1.2rem;
     color: var(--td-text-color-secondary);
+    gap: 0.4rem;
 
     &_target {
       flex: 1 0;
@@ -88,7 +88,8 @@ const targetName = computed(
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    &_speed {
+    &_speed,
+    &_percent {
       flex-shrink: 0;
     }
   }
