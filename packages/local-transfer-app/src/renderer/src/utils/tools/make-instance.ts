@@ -49,6 +49,7 @@ export default function makeInstance<T extends IpcApi>(
 
   ipcRenderer.on(channelName, async (_event, params: Record<string, any>) => {
     const { cmd, payload } = params;
+    console.log('ipcRenderer:receive event from ipcMain:', cmd, payload);
     const eventHandlers = listenerRecords[cmd];
 
     if (!eventHandlers) {

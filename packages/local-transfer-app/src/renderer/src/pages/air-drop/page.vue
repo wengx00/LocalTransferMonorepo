@@ -24,7 +24,7 @@
         </template>
         <ListTile v-for="item in serviceList" :key="item.id">
           {{ item.name }}
-          <template #secondary> {{ item.ip }} : {{ item.port }} </template>
+          <template #secondary> {{ item.ip }} on {{ item.port }} </template>
         </ListTile>
         <EmptyList v-if="serviceList.length === 0" title="暂无可用设备" />
       </SectionCard>

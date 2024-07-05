@@ -36,6 +36,8 @@ export const useServiceInfo = defineStore('service-info', () => {
     const initServicesTask = async () => {
       availableServices.value = await serviceApi.invoke.getAvailableServices();
       verifiedServices.value = await serviceApi.invoke.getVerifiedDevices();
+      console.log('Available Services:', availableServices.value);
+      console.log('Verified Services:', verifiedServices.value);
     };
 
     // 注册更新回调
