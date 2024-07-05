@@ -855,6 +855,9 @@ export class Service implements IService {
         // 忽略本机 IP 的发包
         const localIp = ip.address('public', 'ipv4');
         if (localIp === rinfo.address) {
+          if (process.env.RUNTIME === 'e2e') {
+            console.log('[e2e] UDP Socket Received Local Message.');
+          }
           return;
         }
 
@@ -998,7 +1001,7 @@ export class Service implements IService {
         return;
       }
       // UDP 只能使用熟知端口 86
-      this.udpSocket.bind(86, () => {
+      this.udpSocket.bind(86, '0.0.0.0', () => {
         console.log(
           `UDP Server listening on ${ip.address('public', 'ipv4')}:86`,
         );
