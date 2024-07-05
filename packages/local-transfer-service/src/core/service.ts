@@ -120,7 +120,7 @@ export class Service implements IService {
           ip: ip.address('public', 'ipv4'),
         },
       }).toJSON(),
-      86,
+      25,
       '255.255.255.255', // 广播
       () => {
         this.udpSocket.close();
@@ -312,7 +312,7 @@ export class Service implements IService {
           ip: ip.address('public', 'ipv4'),
         },
       }).toJSON(),
-      86,
+      25,
       '255.255.255.255', // 广播
     );
   }
@@ -556,7 +556,7 @@ export class Service implements IService {
           ip: ip.address('public', 'ipv4'),
         },
       }).toJSON(),
-      86,
+      25,
       '255.255.255.255', // 广播
     );
   }
@@ -893,7 +893,7 @@ export class Service implements IService {
                     port: this.tcpPort,
                   },
                 }).toJSON(),
-                rinfo.port,
+                25,
                 rinfo.address,
               );
               if (info) {
@@ -1000,10 +1000,10 @@ export class Service implements IService {
       if (process.env.RUNTIME === 'test') {
         return;
       }
-      // UDP 只能使用熟知端口 86
-      this.udpSocket.bind(86, '0.0.0.0', () => {
+      // UDP 只能使用熟知端口 25
+      this.udpSocket.bind(25, '0.0.0.0', () => {
         console.log(
-          `UDP Server listening on ${ip.address('public', 'ipv4')}:86`,
+          `UDP Server listening on ${ip.address('public', 'ipv4')}:25`,
         );
         // 开启广播收发能力
         this.udpSocket.setBroadcast(true);
