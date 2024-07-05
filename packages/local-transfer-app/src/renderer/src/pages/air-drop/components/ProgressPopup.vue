@@ -1,5 +1,5 @@
 <template>
-  <div class="progress-popup">
+  <transition-group tag="div" class="progress-popup" name="list">
     <ProgressBar
       v-for="item in sendController.taskList"
       :key="item.batchId"
@@ -8,11 +8,18 @@
       :target-id="'1'"
       :speed="item.speed"
     />
-  </div>
+    <EmptyList
+      v-if="sendController.taskList.length === 0"
+      title="暂无发送任务"
+      :img="EmptyTaskImage"
+    />
+  </transition-group>
 </template>
 
 <script setup lang="ts">
+import EmptyList from '@renderer/components/EmptyList.vue';
 import ProgressBar from '@renderer/components/ProgressBar.vue';
+import EmptyTaskImage from '@assets/image/Empty-Box.png';
 import { useSendController } from '@renderer/store/send-controller';
 
 const sendController = useSendController();

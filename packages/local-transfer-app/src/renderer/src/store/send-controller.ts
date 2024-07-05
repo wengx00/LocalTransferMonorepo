@@ -18,7 +18,7 @@ export const useSendController = defineStore('send-controller', () => {
   const taskMap = ref(new Map<string, SendTask>());
 
   // 任务列表
-  const taskList = computed(() => taskMap.value.values());
+  const taskList = computed(() => Array.from(taskMap.value.values()));
 
   function onLaunchHandler({ filename, batchId, size }: TransferInfo) {
     if (taskMap.value.has(batchId)) {
