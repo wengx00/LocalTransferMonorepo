@@ -25,7 +25,9 @@ export const useReceiveController = defineStore('receive-controller', () => {
   const taskMap = ref(new Map<string, ReceiveTask>());
 
   // 任务列表
-  const taskList = computed(() => taskMap.value.values());
+  const taskList = computed(() => Array.from(taskMap.value.values()));
+  // 接收剪贴板
+  const clipboard = ref<string[]>([]);
 
   // 接收文件处理器
   const receiveFileHandler: ReceiveFileHandler = async (
@@ -91,6 +93,9 @@ export const useReceiveController = defineStore('receive-controller', () => {
     if (!initialized) {
       initialized = true;
       serviceApi.listener.receiveFile(receiveFileHandler);
+      serviceApi.listener.receiveText((context) => {
+        clipboard.value.push(context.text);
+      });
       // 注册清理任务，每30s执行一次
       timer = setInterval(clearHandler, 30 * 1000) as any;
     }
@@ -103,10 +108,17 @@ export const useReceiveController = defineStore('receive-controller', () => {
     }
   }
 
+  // 删除剪贴板的某一项
+  function removeClipboardItem(index: number) {
+    clipboard.value.splice(index, 1);
+  }
+
   return {
     taskList,
+    clipboard,
 
     initialize,
-    dispose
+    dispose,
+    removeClipboardItem
   };
 });

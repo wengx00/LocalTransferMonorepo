@@ -25,6 +25,7 @@ const versions = reactive({ ...window.electron.process.versions });
 <style scoped lang="scss">
 .versions {
   @include flex(column, flex-start, flex-start);
+  width: 100%;
 
   .item {
     /* border-bottom: 1px solid var(--td-border-level-1-color); */

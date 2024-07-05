@@ -1,5 +1,6 @@
 import nativeApi from '@renderer/apis/native';
 import serviceApi from '@renderer/apis/service';
+import interact from '@renderer/utils/interact';
 import { ServiceInfo } from 'local-transfer-service';
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
@@ -51,6 +52,17 @@ export const useServiceInfo = defineStore('service-info', () => {
     });
   }
 
+  // 授权
+  async function authorize(targetId: string) {
+    if (!availableServices.value.find(({ id }) => id === targetId)) {
+      interact.message.error('该设备不存在，请刷新可用列表');
+      return;
+    }
+    await serviceApi.invoke.addVerifiedDevice(targetId);
+    verifiedServices.value = await serviceApi.invoke.getVerifiedDevices();
+    interact.message.success('授权成功');
+  }
+
   // 设置 Service 名称
   async function setServiceName(name: string) {
     await serviceApi.invoke.setName(name);
@@ -74,6 +86,7 @@ export const useServiceInfo = defineStore('service-info', () => {
 
     initInfo,
     setServiceName,
-    setDownloadRoot
+    setDownloadRoot,
+    authorize
   };
 });

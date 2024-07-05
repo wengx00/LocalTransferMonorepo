@@ -57,14 +57,15 @@
 <script setup lang="ts">
 import ListTile from '@renderer/components/ListTile.vue';
 import constants from '@renderer/utils/constants';
-import { useServiceInfo } from '@store/service-info';
 import { useAppConfig } from '@store/app-config';
+import { useServiceInfo } from '@store/service-info';
 import { storeToRefs } from 'pinia';
 import { DashboardIcon, SendIcon, SettingIcon } from 'tdesign-icons-vue-next';
 import { onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
 const appConfig = useAppConfig();
+const appConfigStoreRefs = storeToRefs(appConfig);
 const serviceInfo = useServiceInfo();
 const router = useRouter();
 
@@ -73,8 +74,8 @@ onMounted(async () => {
   appConfig.setCurrentMenuValue('settings');
 });
 
-watch(storeToRefs(appConfig).currentMenuValue, () => {
-  router.push({
+watch(appConfigStoreRefs.currentMenuValue, () => {
+  router.replace({
     path: appConfig.currentMenuValue as string
   });
 });
@@ -144,11 +145,13 @@ watch(storeToRefs(appConfig).currentMenuValue, () => {
 
 .v-enter-active,
 .v-leave-active {
-  transition: opacity 0.3s ease;
+  transition: all 0.3s ease;
+  transform: translateY(0);
 }
 
 .v-enter-from,
 .v-leave-to {
   opacity: 0;
+  transform: translateY(10%);
 }
 </style>

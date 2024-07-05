@@ -85,6 +85,10 @@ app.whenReady().then(() => {
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+
+  app.on('before-quit', function () {
+    dispose();
+  });
 });
 
 // Quit when all windows are closed, except on macOS. There, it's common
@@ -94,8 +98,6 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
-  // 清除监听器
-  dispose();
 });
 
 // In this file you can include the rest of your app"s specific main process

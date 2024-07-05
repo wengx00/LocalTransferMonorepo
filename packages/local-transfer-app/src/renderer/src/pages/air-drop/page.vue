@@ -53,17 +53,17 @@
         </div>
       </SectionCard>
     </div>
+    <t-drawer
+      v-model:visible="progressPopup"
+      :confirm-btn="null"
+      cancel-btn="关闭"
+      destroy-on-close
+      size="50%"
+      header="投送进度"
+    >
+      <ProgressPopup />
+    </t-drawer>
   </div>
-  <t-drawer
-    v-model:visible="progressPopup"
-    :confirm-btn="null"
-    cancel-btn="关闭"
-    destroy-on-close
-    size="50%"
-    header="投送进度"
-  >
-    <ProgressPopup />
-  </t-drawer>
 </template>
 
 <script setup lang="ts">
@@ -84,6 +84,7 @@ import { ref } from 'vue';
 import EmptyList from '@renderer/components/EmptyList.vue';
 
 const serviceInfo = useServiceInfo();
+const serviceInfoStoreRefs = storeToRefs(serviceInfo);
 const sendController = useSendController();
 const filePaths = ref<string[]>([]);
 
@@ -92,7 +93,7 @@ const progressPopup = ref(false);
 
 const serviceList = ref<Array<ServiceInfo & { selected?: boolean }>>(serviceInfo.availableServices);
 
-watch(storeToRefs(serviceInfo).availableServices, () => {
+watch(serviceInfoStoreRefs.availableServices, () => {
   serviceList.value = serviceInfo.availableServices;
 });
 

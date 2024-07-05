@@ -1,11 +1,21 @@
 <template>
   <div class="progress-popup">
-    <ProgressBar class="item" label="测试文件" :progress="30" :speed="570" :target-id="'123'" />
+    <ProgressBar
+      v-for="item in sendController.taskList"
+      :key="item.batchId"
+      :label="item.filename"
+      :progress="item.progress"
+      :target-id="'1'"
+      :speed="item.speed"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import ProgressBar from '@renderer/components/ProgressBar.vue';
+import { useSendController } from '@renderer/store/send-controller';
+
+const sendController = useSendController();
 </script>
 
 <style scoped lang="scss">

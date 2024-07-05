@@ -1,13 +1,15 @@
 <template>
   <div class="empty-list">
-    <img src="@assets/image/Empty.png" />
+    <img :src="img ?? DefaultEmptyImage" />
     <div>{{ title ?? '暂无数据' }}</div>
   </div>
 </template>
 
 <script setup lang="ts">
+import DefaultEmptyImage from '@assets/image/Empty.png';
 defineProps<{
   title?: string;
+  img?: string;
 }>();
 </script>
 
@@ -22,8 +24,10 @@ defineProps<{
   font-size: 1.6rem;
 
   img {
-    width: 100%;
-    height: auto;
+    width: 20rem;
+    height: 20rem;
+    object-fit: cover;
+    object-position: center;
   }
 }
 </style>

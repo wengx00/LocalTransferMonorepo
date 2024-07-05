@@ -1,5 +1,5 @@
 import { NativeApi } from '@ipc/native';
-import { app, dialog } from 'electron';
+import { app, clipboard, dialog } from 'electron';
 import { type, hostname } from 'os';
 
 export default class NativeApiHelper implements IpcMainHelper<NativeApi> {
@@ -58,6 +58,10 @@ export default class NativeApiHelper implements IpcMainHelper<NativeApi> {
     },
     async setRuntime(value) {
       process.env.RUNTIME = value;
+      return Promise.resolve();
+    },
+    async writeClipboard(value) {
+      clipboard.writeText(value);
       return Promise.resolve();
     }
   };

@@ -76,6 +76,10 @@ declare module '@ipc/native' {
        * 设置本地运行时
        */
       setRuntime(value: string): Promise<void>;
+      /**
+       * 写入剪贴板
+       */
+      writeClipboard(value: string): Promise<void>;
     };
   }
 }

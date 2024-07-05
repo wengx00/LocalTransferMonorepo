@@ -34,7 +34,7 @@ defineSlots<{
     color: var(--td-text-color-secondary);
   }
   &_content {
-    @include flex(column, flex-start, flex-start);
+    @include flex(column, flex-start, center);
     width: 100%;
     flex: 1 0;
     overflow: hidden;

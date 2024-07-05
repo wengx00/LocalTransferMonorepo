@@ -1,8 +1,8 @@
+import { useAppConfig } from '@store/app-config';
+import { createPinia } from 'pinia';
 import { createApp } from 'vue';
 import App from './App.vue';
-import { createPinia } from 'pinia';
 import router from './utils/router';
-import { useAppConfig } from '@store/app-config';
 import debounce from './utils/tools/debounce';
 // 全量引入TDesign，本地包无需担心产物大小
 import TDesign from 'tdesign-vue-next';
@@ -25,6 +25,7 @@ receiveController.initialize();
 
 window.addEventListener('beforeunload', () => {
   receiveController.dispose();
+  // serviceApi.invoke.dispose();
 });
 
 // 窗口调整时更新屏幕信息
