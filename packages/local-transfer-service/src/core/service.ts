@@ -544,9 +544,6 @@ export class Service implements IService {
   refresh(): void {
     // 清空可用列表
     this.availableServices = [];
-    this.availableServicesUpdateHandlers.forEach((handler) => {
-      handler();
-    });
     this.udpSocket.send(
       JsonResponse.ok({
         type: UdpMessage.SEARCH_FOR_AVAILABLE_SERVICE,
@@ -908,15 +905,15 @@ export class Service implements IService {
                     port: info.port,
                     name: info.name,
                   });
-                  this.availableServicesUpdateHandlers.forEach((handler) => {
-                    handler();
-                  });
                 } else {
                   // 更新一波已有的记录
                   target.ip = rinfo.address;
                   target.port = info.port;
                   target.name = info.name;
                 }
+                this.availableServicesUpdateHandlers.forEach((handler) => {
+                  handler();
+                });
               }
               break;
             case UdpMessage.SERVICE_DEAD:
@@ -924,12 +921,12 @@ export class Service implements IService {
               this.availableServices = this.availableServices.filter(
                 ({ ip }) => ip !== rinfo.address,
               );
-              this.availableServicesUpdateHandlers.forEach((handler) => {
-                handler();
-              });
               this.verifiedServices = this.verifiedServices.filter(
                 ({ ip }) => ip !== rinfo.address,
               );
+              this.availableServicesUpdateHandlers.forEach((handler) => {
+                handler();
+              });
               break;
             case UdpMessage.TELL_AVAILABLE_SERVICE: {
               // 有新的可用 Service，添加可用记录

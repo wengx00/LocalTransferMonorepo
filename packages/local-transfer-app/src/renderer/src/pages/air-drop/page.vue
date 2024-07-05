@@ -22,10 +22,12 @@
             />
           </div>
         </template>
-        <ListTile v-for="item in serviceList" :key="item.id">
-          {{ item.name }}
-          <template #secondary> {{ item.ip }} on {{ item.port }} </template>
-        </ListTile>
+        <transition-group name="list">
+          <ListTile v-for="item in serviceList" :key="item.id">
+            {{ item.name }}
+            <template #secondary> {{ item.ip }} on {{ item.port }} </template>
+          </ListTile>
+        </transition-group>
         <EmptyList v-if="serviceList.length === 0" title="暂无可用设备" />
       </SectionCard>
       <SectionCard class="files-root">

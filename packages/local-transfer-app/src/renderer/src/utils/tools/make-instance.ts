@@ -65,7 +65,7 @@ export default function makeInstance<T extends IpcApi>(
     Promise.allSettled(promises).then((results) => {
       results.forEach((result) => {
         if (result.status === 'rejected') {
-          console.log('[IpcClient] listener error:', result.reason);
+          console.error('[IpcClient] listener error:', result.reason);
         }
       });
     });

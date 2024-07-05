@@ -19,13 +19,14 @@ export default function makeInstance<T extends IpcApi>(
     get(_target: any, prop: string | symbol) {
       const curProp = prop.toString();
       return (payload: any) => {
+        console.log('ipcMain emitter emit', curProp, payload);
         try {
-          webContents?.emit(channelName, {
+          webContents!.send(channelName, {
             cmd: curProp,
             payload
           });
         } catch (err) {
-          console.log('[IpcMain] emit error:', err);
+          console.error('[IpcMain] emit error:', err);
         }
       };
     }
