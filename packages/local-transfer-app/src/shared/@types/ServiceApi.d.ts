@@ -1,5 +1,6 @@
 declare module '@ipc/service' {
   import {
+    AvailableServiceUpdateHandler,
     ReceiveFileHandler,
     ReceiveTextHandler,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -94,16 +95,17 @@ declare module '@ipc/service' {
       /**
        * 刷新可用设备列表
        */
-      refresh(): void;
+      refresh(): Promise<void>;
 
       /**
        * 关闭设备
        */
-      dispose(): void;
+      dispose(): Promise<void>;
     };
     listener: {
       receiveFile(handler: ReceiveFileHandler): Promise<void>;
       receiveText(handler: ReceiveTextHandler): Promise<void>;
+      availableServicesUpdate(handler: AvailableServiceUpdateHandler): Promise<void>;
     };
   }
 }

@@ -20,7 +20,7 @@
         </template>
         接收面板
       </t-menu-item>
-      <t-menu-item value="send-file">
+      <t-menu-item value="air-drop">
         <template #icon>
           <SendIcon />
         </template>
@@ -47,7 +47,8 @@
         </router-view>
       </div>
       <div class="footer">
-        {{ constants.appTitle }} &copy; {{ new Date().getFullYear() }} All Rights Reserved.
+        Copyright &copy; {{ constants.appTitle }} {{ new Date().getFullYear() }}. All Rights
+        Reserved.
       </div>
     </div>
   </div>
@@ -56,8 +57,8 @@
 <script setup lang="ts">
 import ListTile from '@renderer/components/ListTile.vue';
 import constants from '@renderer/utils/constants';
-import { useServiceInfo } from '@renderer/utils/store/service-info';
-import { useAppConfig } from '@utils/store/app-config';
+import { useServiceInfo } from '@store/service-info';
+import { useAppConfig } from '@store/app-config';
 import { storeToRefs } from 'pinia';
 import { DashboardIcon, SendIcon, SettingIcon } from 'tdesign-icons-vue-next';
 import { onMounted, watch } from 'vue';

@@ -93,8 +93,8 @@ import windowsAct from '../../assets/image/windowsAct.png';
 import linuxAct from '../../assets/image/linuxAct.png';
 import linux from '../../assets/image/linux.png';
 import refreshAct from '../../assets/image/refreshAct.png';
-import { useServiceInfo } from '@renderer/utils/store/service-info';
-import { useSendController } from '@renderer/utils/store/send-controller';
+import { useServiceInfo } from '@store/service-info';
+import { useSendController } from '@renderer/store/send-controller';
 
 const serviceInfo = useServiceInfo();
 const sendController = useSendController();

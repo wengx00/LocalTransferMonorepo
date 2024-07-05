@@ -25,6 +25,7 @@ defineSlots<{
   background-color: #fff;
   flex-shrink: 0;
   gap: 0.4rem;
+  overflow: hidden;
 
   &_title {
     @include padding(0 0.8rem);
@@ -33,8 +34,10 @@ defineSlots<{
     color: var(--td-text-color-secondary);
   }
   &_content {
+    @include flex(column, flex-start, flex-start);
     width: 100%;
-    flex-shrink: 0;
+    flex: 1 0;
+    overflow: hidden;
   }
 }
 </style>

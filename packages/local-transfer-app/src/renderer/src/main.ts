@@ -2,15 +2,15 @@ import { createApp } from 'vue';
 import App from './App.vue';
 import { createPinia } from 'pinia';
 import router from './utils/router';
-import { useAppConfig } from './utils/store/app-config';
+import { useAppConfig } from '@store/app-config';
 import debounce from './utils/tools/debounce';
 // 全量引入TDesign，本地包无需担心产物大小
 import TDesign from 'tdesign-vue-next';
 // import 'tdesign-vue-next/es/style/index.css';
 import '@assets/styles/reset.scss';
 import '@assets/styles/theme.css';
-import { useReceiveController } from './utils/store/receive-controller';
-import { useServiceInfo } from './utils/store/service-info';
+import { useReceiveController } from '@store/receive-controller';
+import { useServiceInfo } from '@store/service-info';
 
 const pinia = createPinia();
 

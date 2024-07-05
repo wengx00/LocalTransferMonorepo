@@ -2,7 +2,7 @@ import serviceApi from '@renderer/apis/service';
 import { ReceiveFileHandler } from 'local-transfer-service';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import interact from '../interact';
+import interact from '../utils/interact';
 
 export interface ReceiveTask {
   batchId: string;

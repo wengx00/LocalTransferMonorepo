@@ -50,7 +50,7 @@
         </template>
       </ListTile>
       <ListTile direction="row" gap="1rem">
-        Contributor
+        Contributors
         <template #secondary>
           {{ constants.contributor }}
         </template>
@@ -67,7 +67,7 @@ import SectionCard from '@renderer/components/SectionCard.vue';
 import Versions from '@renderer/components/Versions.vue';
 import constants from '@renderer/utils/constants';
 import interact from '@renderer/utils/interact';
-import { useServiceInfo } from '@renderer/utils/store/service-info';
+import { useServiceInfo } from '@store/service-info';
 import { onMounted } from 'vue';
 import { watch } from 'vue';
 import { computed } from 'vue';

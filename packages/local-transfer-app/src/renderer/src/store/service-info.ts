@@ -1,5 +1,6 @@
 import nativeApi from '@renderer/apis/native';
 import serviceApi from '@renderer/apis/service';
+import { ServiceInfo } from 'local-transfer-service';
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 
@@ -12,6 +13,10 @@ export const useServiceInfo = defineStore('service-info', () => {
   const downloadRoot = ref('');
   // TCP 端口
   const tcpPort = ref(86);
+  // 可用设备列表
+  const availableServices = ref<ServiceInfo[]>([]);
+  // 受信设备列表
+  const verifiedServices = ref<ServiceInfo[]>([]);
 
   // 从 ServiceAPI 初始化设备信息
   async function initInfo() {
@@ -27,8 +32,17 @@ export const useServiceInfo = defineStore('service-info', () => {
       }
     };
 
+    const initServicesTask = async () => {
+      availableServices.value = await serviceApi.invoke.getAvailableServices();
+      verifiedServices.value = await serviceApi.invoke.getVerifiedDevices();
+    };
+
+    // 注册更新回调
+    serviceApi.listener.availableServicesUpdate(initServicesTask);
+
     await Promise.all([
       initNameTask(),
+      initServicesTask(),
       (serviceId.value = await serviceApi.invoke.getId()),
       (downloadRoot.value = await serviceApi.invoke.getDownloadRoot()),
       (tcpPort.value = await serviceApi.invoke.getTcpPort())
@@ -55,6 +69,8 @@ export const useServiceInfo = defineStore('service-info', () => {
     serviceId,
     downloadRoot,
     tcpPort,
+    availableServices,
+    verifiedServices,
 
     initInfo,
     setServiceName,

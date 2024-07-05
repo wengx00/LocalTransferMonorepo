@@ -7,7 +7,12 @@
       gap: gap ?? '0.1rem'
     }"
   >
-    <div class="list-tile_primary">
+    <div
+      class="list-tile_primary"
+      :style="{
+        width: direction === 'row' ? 'fit-content' : '100%'
+      }"
+    >
       <slot name="default"></slot>
     </div>
     <div class="list-tile_secondary">

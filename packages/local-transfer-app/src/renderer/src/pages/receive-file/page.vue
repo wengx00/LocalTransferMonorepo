@@ -67,8 +67,8 @@ import refreshAct from '../../assets/image/refreshAct.png';
 import serviceApi from '@renderer/apis/service';
 import nativeApi from '@renderer/apis/native';
 import interact from '@renderer/utils/interact';
-import { useServiceInfo } from '@renderer/utils/store/service-info';
-import { useReceiveController } from '@renderer/utils/store/receive-controller';
+import { useServiceInfo } from '@store/service-info';
+import { useReceiveController } from '@renderer/store/receive-controller';
 
 const serviceInfo = useServiceInfo();
 const receiveController = useReceiveController();
