@@ -1,6 +1,13 @@
 <template>
   <div class="container">
-    <PageHeader title="隔空投送" />
+    <div class="title-bar">
+      <PageHeader style="flex: 1 0" title="隔空投送" />
+      <t-button shape="circle" style="flex-shrink: 0" @click="toggleProgressPopup">
+        <template #icon>
+          <RocketIcon />
+        </template>
+      </t-button>
+    </div>
     <div class="airdrop-aio">
       <SectionCard class="services-root">
         <template #title>
@@ -15,16 +22,17 @@
             />
           </div>
         </template>
-        <ListTile v-for="item in serviceInfo.availableServices" :key="item.id">
+        <ListTile v-for="item in serviceList" :key="item.id">
           {{ item.name }}
           <template #secondary> {{ item.ip }} : {{ item.port }} </template>
         </ListTile>
+        <EmptyList v-if="serviceList.length === 0" title="暂无可用设备" />
       </SectionCard>
       <SectionCard class="files-root">
         <template #title>
           <div class="header">
             投送文件
-            <t-button size="small">
+            <t-button :disabled="filePaths.length === 0" @click="airdrop">
               <template #icon>
                 <CloudUploadIcon />
               </template>
@@ -46,6 +54,16 @@
       </SectionCard>
     </div>
   </div>
+  <t-drawer
+    v-model:visible="progressPopup"
+    :confirm-btn="null"
+    cancel-btn="关闭"
+    destroy-on-close
+    size="50%"
+    header="投送进度"
+  >
+    <ProgressPopup />
+  </t-drawer>
 </template>
 
 <script setup lang="ts">
@@ -54,15 +72,29 @@ import FileSelectorAio from '@renderer/components/FileSelectorAio.vue';
 import ListTile from '@renderer/components/ListTile.vue';
 import PageHeader from '@renderer/components/PageHeader.vue';
 import SectionCard from '@renderer/components/SectionCard.vue';
+import { useSendController } from '@renderer/store/send-controller';
 import interact from '@renderer/utils/interact';
 import { useServiceInfo } from '@store/service-info';
-import { CloseIcon, CloudUploadIcon, RefreshIcon } from 'tdesign-icons-vue-next';
+import { ServiceInfo } from 'local-transfer-service';
+import { storeToRefs } from 'pinia';
+import { CloseIcon, CloudUploadIcon, RefreshIcon, RocketIcon } from 'tdesign-icons-vue-next';
+import ProgressPopup from './components/ProgressPopup.vue';
+import { watch } from 'vue';
 import { ref } from 'vue';
+import EmptyList from '@renderer/components/EmptyList.vue';
 
 const serviceInfo = useServiceInfo();
+const sendController = useSendController();
 const filePaths = ref<string[]>([]);
 
 const refreshSpin = ref(false);
+const progressPopup = ref(false);
+
+const serviceList = ref<Array<ServiceInfo & { selected?: boolean }>>(serviceInfo.availableServices);
+
+watch(storeToRefs(serviceInfo).availableServices, () => {
+  serviceList.value = serviceInfo.availableServices;
+});
 
 // 刷新可用设备
 async function refresh() {
@@ -96,109 +128,27 @@ function selectFile(paths: string[]) {
 function cancelFile(index: number) {
   filePaths.value.splice(index, 1);
 }
+
+// 打开进度抽屉
+function toggleProgressPopup() {
+  progressPopup.value = !progressPopup.value;
+}
+
+// 隔空投送
+function airdrop() {
+  const targetIds = serviceList.value.filter((item) => item.selected).map(({ id }) => id);
+  if (targetIds.length === 0) {
+    interact.message.warning('请选择投送设备');
+    return;
+  }
+  filePaths.value.forEach((filePath) => {
+    targetIds.forEach((id) => {
+      sendController.sendFile(filePath, id);
+    });
+  });
+  // 清空选中的文件
+  filePaths.value = [];
+}
 </script>
 
-<style scoped lang="scss">
-.container {
-  @include flex(column, flex-start, flex-start);
-  @include size();
-  @include padding(1.2rem);
-  flex-shrink: 0;
-  overflow: hidden;
-  gap: 1.2rem;
-}
-
-.airdrop-aio {
-  @include flex(row, flex-start, flex-start);
-  width: 100%;
-  flex: 1 0;
-  gap: 1.2rem;
-  overflow: hidden;
-
-  .services-root {
-    @include flex(column, flex-start, flex-start);
-    height: 100%;
-    flex: 1 0;
-    overflow: hidden;
-
-    @keyframes spin {
-      0% {
-        transform: rotate(0deg);
-      }
-      100% {
-        transform: rotate(360deg);
-      }
-    }
-
-    .header {
-      @include flex(row, space-between, center);
-      width: 100%;
-      flex-shrink: 0;
-    }
-
-    .refresh {
-      cursor: pointer;
-
-      &:hover {
-        color: var(--td-brand-color);
-      }
-      &.spin {
-        animation: spin 1s linear infinite;
-      }
-    }
-  }
-
-  .files-root {
-    @include flex(column, flex-start, flex-start);
-    height: 100%;
-    flex: 2 0;
-    overflow: hidden;
-    gap: 1.2rem;
-
-    .header {
-      @include flex(row, space-between, center);
-      width: 100%;
-      flex-shrink: 0;
-    }
-
-    .content {
-      @include flex(column, flex-start, flex-start);
-      flex: 1 0;
-      width: 100%;
-      overflow: hidden;
-      overflow-y: auto;
-    }
-
-    .selected {
-      @include flex(row, space-between, center);
-      @include padding(0.4rem);
-      flex-shrink: 0;
-      border-radius: 0.4rem;
-      background-color: #f6f6f6;
-      font-size: 1.4rem;
-      color: #333;
-      width: 100%;
-      overflow: hidden;
-      margin-top: 0.8rem;
-      gap: 0.8rem;
-      cursor: pointer;
-
-      .filename {
-        flex: 1 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .close {
-        flex-shrink: 0;
-        transition: all 0.3s;
-
-        &:hover {
-          color: var(--td-brand-color);
-        }
-      }
-    }
-  }
-}
-</style>
+<style scoped lang="scss" src="./index.scss"></style>

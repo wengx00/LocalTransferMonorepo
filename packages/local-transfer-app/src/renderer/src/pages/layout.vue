@@ -144,12 +144,11 @@ watch(storeToRefs(appConfig).currentMenuValue, () => {
 
 .v-enter-active,
 .v-leave-active {
-  transition: all 0.3s ease;
+  transition: opacity 0.3s ease;
 }
 
 .v-enter-from,
 .v-leave-to {
   opacity: 0;
-  transform: translateY(10%);
 }
 </style>
