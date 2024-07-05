@@ -36,6 +36,22 @@
       flex-shrink: 0;
     }
 
+    .content-primary {
+      @include flex(row, flex-start, center);
+      width: 100%;
+      overflow: hidden;
+
+      .checkbox {
+        flex-shrink: 0;
+      }
+      .name {
+        flex: 1 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+
     .refresh {
       cursor: pointer;
 
@@ -60,7 +76,7 @@
   .files-root {
     @include flex(column, flex-start, center);
     height: 100%;
-    flex: 2 0;
+    flex: 1 0;
     overflow: hidden;
     gap: 1.2rem;
 
@@ -70,7 +86,6 @@
       flex-shrink: 0;
     }
 
-    
     .content {
       @include flex(column, flex-start, flex-start);
       width: 100%;

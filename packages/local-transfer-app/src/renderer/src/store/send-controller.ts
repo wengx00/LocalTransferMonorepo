@@ -58,10 +58,9 @@ export const useSendController = defineStore('send-controller', () => {
     try {
       const result = await serviceApi.invoke.sendFile({
         path,
-        targetId,
-        onLaunch: onLaunchHandler,
-        onProgress: onProgressHandler
+        targetId
       });
+      console.log('发送文件结果', result);
       const { batchId, filename, cost } = result;
       interact.notify.success({
         title: '发送成功',
@@ -69,20 +68,39 @@ export const useSendController = defineStore('send-controller', () => {
       });
       // 无论成功失败都直接删除记录
       taskMap.value.delete(batchId);
-    } catch (err) {
+    } catch (err: any) {
+      console.log('发送文件时失败', err);
+      if (err?.errMsg) {
+        interact.notify.error({
+          title: '发送失败',
+          content: err.errMsg
+        });
+        return;
+      }
       const { filename, reason, batchId } = err as SendFileException;
       interact.notify.error({
         title: '发送失败',
-        content: `${filename}发送失败，错误信息：${reason}`
+        content: `${filename || path}发送失败，错误信息：${reason || 'IPC接口调用异常'}`
       });
       // 无论成功失败都直接删除记录
       taskMap.value.delete(batchId);
     }
   }
 
+  async function registryListener() {
+    const dispose = await Promise.all([
+      await serviceApi.listener.sendFileOnLaunch(onLaunchHandler),
+      await serviceApi.listener.sendFileOnProgress(onProgressHandler)
+    ]);
+    return () => {
+      dispose.forEach((fn) => fn());
+    };
+  }
+
   return {
     taskList,
 
-    sendFile
+    sendFile,
+    registryListener
   };
 });

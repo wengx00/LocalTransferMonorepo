@@ -24,7 +24,10 @@
         </template>
         <transition-group name="list">
           <ListTile v-for="item in serviceList" :key="item.id">
-            {{ item.name }}
+            <div class="content-primary">
+              <t-checkbox v-model="item.selected" class="checkbox" />
+              <div class="name">{{ item.name }}</div>
+            </div>
             <template #secondary> {{ item.ip }} on {{ item.port }} </template>
           </ListTile>
         </transition-group>
@@ -96,7 +99,13 @@ const progressPopup = ref(false);
 const serviceList = ref<Array<ServiceInfo & { selected?: boolean }>>(serviceInfo.availableServices);
 
 watch(serviceInfoStoreRefs.availableServices, () => {
-  serviceList.value = serviceInfo.availableServices;
+  const curSelectedSet = new Set(
+    serviceList.value.filter((item) => item.selected).map(({ id }) => id)
+  );
+  serviceList.value = serviceInfo.availableServices.map((item) => ({
+    ...item,
+    selected: curSelectedSet.has(item.id)
+  }));
 });
 
 // 刷新可用设备

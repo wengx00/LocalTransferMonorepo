@@ -90,7 +90,7 @@ declare module '@ipc/service' {
        * @returns Promise 成功时回调 {SendFileResult}，失败时抛出 {SendFileException}
        * @throws {SendFileException}
        */
-      sendFile(request: SendFileRequest): Promise<SendFileResult>;
+      sendFile(request: Omit<SendFileRequest, 'onLaunch' | 'onDone'>): Promise<SendFileResult>;
 
       /**
        * 刷新可用设备列表
@@ -106,6 +106,8 @@ declare module '@ipc/service' {
       receiveFile(handler: ReceiveFileHandler): Promise<void>;
       receiveText(handler: ReceiveTextHandler): Promise<void>;
       availableServicesUpdate(handler: AvailableServiceUpdateHandler): Promise<void>;
+      sendFileOnProgress(handler: SendFileRequest['onProgress']): Promise<any>;
+      sendFileOnLaunch(handler: SendFileRequest['onLaunch']): Promise<any>;
     };
   }
 }

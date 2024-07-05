@@ -16,6 +16,21 @@
           </div>
         </template>
         <EmptyList v-if="serviceList.length === 0" title="暂无可用设备" />
+        <transition-group v-else name="list" tag="div" class="content">
+          <ListTile v-for="item in serviceList" :key="item.id">
+            <div class="content-primary">
+              <div class="name">{{ item.name }}</div>
+              <t-button
+                variant="outline"
+                :theme="item.verified ? 'success' : 'warning'"
+                size="small"
+                @click="serviceInfo.authorize(item.id)"
+                >{{ item.verified ? '已信任' : '未信任' }}</t-button
+              >
+            </div>
+            <template #secondary> {{ item.ip }} on {{ item.port }} </template>
+          </ListTile>
+        </transition-group>
       </SectionCard>
       <SectionCard class="files-root">
         <template #title>
@@ -85,12 +100,13 @@ import { ref, watch } from 'vue';
 import EmptyTaskListImage from '@assets/image/Empty-Box.png';
 import { computed } from 'vue';
 import nativeApi from '@renderer/apis/native';
+import ListTile from '@renderer/components/ListTile.vue';
 
 const serviceInfo = useServiceInfo();
 const serviceInfoStoreRefs = storeToRefs(serviceInfo);
 const receiveController = useReceiveController();
 
-const serviceList = ref<Array<ServiceInfo & { verified?: boolean }>>([]);
+const serviceList = ref<Array<ServiceInfo & { verified?: boolean }>>(serviceInfo.availableServices);
 const refreshSpin = ref(false);
 const currentVision = ref<'file' | 'text'>('file');
 const clipboard = ref<string[]>([]);
@@ -108,6 +124,7 @@ function updateServiceList() {
     ...service,
     verified: verifiedSet.has(service.id)
   }));
+  console.log('updateServiceList', serviceList.value);
 }
 
 // 切换视图

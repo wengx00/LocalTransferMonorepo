@@ -19,12 +19,11 @@ export default function makeInstance<T extends IpcApi>(
     get(_target: any, prop: string | symbol) {
       const curProp = prop.toString();
       return async (...params: any[]) => {
-        try {
-          return await ipcRenderer.invoke(channelName, curProp, JSON.stringify(params));
-        } catch (err) {
-          console.log('[IpcClient] invoke error:', err);
-          return Promise.reject(err);
+        const result = await ipcRenderer.invoke(channelName, curProp, params);
+        if (result?.retcode !== undefined && result.retcode !== 0) {
+          return Promise.reject(result);
         }
+        return result;
       };
     }
   };

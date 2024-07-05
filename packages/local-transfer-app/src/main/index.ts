@@ -42,7 +42,7 @@ function createWindow(): void {
   makeInstance(namespace.native, new NativeApiHelper(), mainWindow.webContents);
   const serviceApi = makeInstance<ServiceApi>(
     namespace.service,
-    new ServiceApiHelper(),
+    new ServiceApiHelper(mainWindow.webContents),
     mainWindow.webContents
   );
   // 注册 Service 监听事件

@@ -11,6 +11,7 @@ import '@assets/styles/reset.scss';
 import '@assets/styles/theme.css';
 import { useReceiveController } from '@store/receive-controller';
 import { useServiceInfo } from '@store/service-info';
+import { useSendController } from './store/send-controller';
 
 const pinia = createPinia();
 
@@ -19,12 +20,18 @@ createApp(App).use(pinia).use(router).use(TDesign).mount('#app');
 const appConfig = useAppConfig();
 const serviceInfo = useServiceInfo();
 const receiveController = useReceiveController();
+const sendController = useSendController();
 
 serviceInfo.initInfo();
 receiveController.initialize();
+let unregistry: (() => any) | null = null;
+sendController.registryListener().then((dispose) => {
+  unregistry = dispose;
+});
 
-window.addEventListener('beforeunload', () => {
+window.addEventListener('beforeunload', async () => {
   receiveController.dispose();
+  unregistry?.();
   // serviceApi.invoke.dispose();
 });
 
