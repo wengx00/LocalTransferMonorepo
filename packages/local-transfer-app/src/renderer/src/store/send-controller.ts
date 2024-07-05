@@ -55,6 +55,7 @@ export const useSendController = defineStore('send-controller', () => {
   }
 
   async function sendFile(path: string, targetId: string) {
+    console.log('触发文件发送任务', path, targetId);
     try {
       const result = await serviceApi.invoke.sendFile({
         path,

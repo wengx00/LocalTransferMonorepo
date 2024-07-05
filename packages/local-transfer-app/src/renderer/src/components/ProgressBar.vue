@@ -11,7 +11,9 @@
     </div>
     <div class="progress-bar_info">
       <div class="progress-bar_info_target">To：{{ targetName }}</div>
-      <div class="progress-bar_info_speed">速度：{{ speed || 0 }} KB/s</div>
+      <div v-if="speed !== undefined" class="progress-bar_info_speed">
+        速度：{{ speed || 0 }} KB/s
+      </div>
     </div>
   </div>
 </template>
@@ -37,9 +39,7 @@ const props = withDefaults(
 );
 
 const targetName = computed(
-  () =>
-    serviceInfo.availableServices.find(({ id }) => id === props.targetId)?.name ||
-    '未知设备未知设备未知设备未知设备未知设备未知设备未知设备未知设备未知设备未知设备未知设备未知设备未知设备未知设备未知设备未知设备'
+  () => serviceInfo.availableServices.find(({ id }) => id === props.targetId)?.name || '未知设备'
 );
 </script>
 

@@ -730,6 +730,7 @@ export class Service implements IService {
           }
           return;
         }
+        batchId = transferInfo.batchId;
         if (transferInfo.type === TransferType.FILE && !writePath) {
           // batchId和时间戳附加到原始文件名
           writePath = resolve(

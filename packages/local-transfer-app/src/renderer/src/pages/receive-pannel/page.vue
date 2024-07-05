@@ -52,7 +52,6 @@
               class="item"
               :label="item.filename"
               :progress="item.progress"
-              :speed="item.speed"
               :target-id="'1'"
             />
           </transition-group>
@@ -101,6 +100,7 @@ import EmptyTaskListImage from '@assets/image/Empty-Box.png';
 import { computed } from 'vue';
 import nativeApi from '@renderer/apis/native';
 import ListTile from '@renderer/components/ListTile.vue';
+import { onMounted } from 'vue';
 
 const serviceInfo = useServiceInfo();
 const serviceInfoStoreRefs = storeToRefs(serviceInfo);
@@ -161,6 +161,10 @@ async function writeClipboard(text: string) {
 }
 
 watch([serviceInfoStoreRefs.availableServices, serviceInfoStoreRefs.verifiedServices], () => {
+  updateServiceList();
+});
+
+onMounted(() => {
   updateServiceList();
 });
 </script>
