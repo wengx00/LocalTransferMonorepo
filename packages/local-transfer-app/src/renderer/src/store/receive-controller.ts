@@ -2,7 +2,7 @@ import serviceApi from '@renderer/apis/service';
 import { ReceiveFileHandler } from 'local-transfer-service';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import interact from '../interact';
+import interact from '../utils/interact';
 
 export interface ReceiveTask {
   batchId: string;
@@ -25,26 +25,27 @@ export const useReceiveController = defineStore('receive-controller', () => {
   const taskMap = ref(new Map<string, ReceiveTask>());
 
   // 任务列表
-  const taskList = computed(() => taskMap.value.values());
+  const taskList = computed(() => Array.from(taskMap.value.values()));
+  // 接收剪贴板
+  const clipboard = ref<string[]>([]);
 
   // 接收文件处理器
-  const receiveFileHandler: ReceiveFileHandler = async (
-    { batchId, speed, progress, size, filename, sourceId, done },
-    error
-  ) => {
+  const receiveFileHandler: ReceiveFileHandler = async (context, error) => {
+    const { batchId, speed, progress, size, filename, sourceId, done } = context;
     if (error) {
       interact.notify.error({
         title: '接收文件失败',
-        content: `接收${filename}失败，错误信息：${error}`
+        content: `接收 ${filename} 失败，错误信息：${error}`
       });
       // 出错时把记录删了
       taskMap.value.delete(batchId);
       return;
     }
+    console.log('接收文件 onProgress...', context);
     if (done) {
       interact.notify.success({
         title: '接收文件成功',
-        content: `${filename}接收成功`
+        content: `${filename} 接收成功`
       });
       // 成功时把记录删了
       taskMap.value.delete(batchId);
@@ -91,6 +92,9 @@ export const useReceiveController = defineStore('receive-controller', () => {
     if (!initialized) {
       initialized = true;
       serviceApi.listener.receiveFile(receiveFileHandler);
+      serviceApi.listener.receiveText((context) => {
+        clipboard.value.push(context.text);
+      });
       // 注册清理任务，每30s执行一次
       timer = setInterval(clearHandler, 30 * 1000) as any;
     }
@@ -103,10 +107,17 @@ export const useReceiveController = defineStore('receive-controller', () => {
     }
   }
 
+  // 删除剪贴板的某一项
+  function removeClipboardItem(index: number) {
+    clipboard.value.splice(index, 1);
+  }
+
   return {
     taskList,
+    clipboard,
 
     initialize,
-    dispose
+    dispose,
+    removeClipboardItem
   };
 });

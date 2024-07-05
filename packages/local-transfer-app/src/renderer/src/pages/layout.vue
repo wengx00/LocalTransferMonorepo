@@ -6,66 +6,76 @@
       class="sidebar"
       @change="appConfig.setCurrentMenuValue"
     >
-      <template #logo>
-        <div>{{ constants.appTitle }}</div>
-      </template>
-      <t-menu-item value="receive-file">
-        <template #icon>
-          <FileDownloadIcon />
+      <ListTile class="title-bar">
+        <span class="title">
+          {{ constants.appTitle }}
+        </span>
+        <template #secondary>
+          {{ constants.appSlogan }}
         </template>
-        <p class="text">接收文件</p>
+      </ListTile>
+      <t-menu-item value="receive-pannel">
+        <template #icon>
+          <DashboardIcon />
+        </template>
+        接收面板
       </t-menu-item>
-      <t-menu-item value="send-file">
+      <t-menu-item value="air-drop">
         <template #icon>
-          <FileImportIcon />
+          <SendIcon />
         </template>
-        <p class="text">发送文件</p>
+        隔空投送
       </t-menu-item>
       <t-menu-item value="settings">
         <template #icon>
-          <SystemSettingIcon />
+          <SettingIcon />
         </template>
-        <p class="text">系统设置</p>
+        系统设置
       </t-menu-item>
     </t-menu>
     <div class="body">
       <div class="header">
         <div class="current-device">
-          <div style="width: 30%">设备ID: {{ serviceInfo.serviceId }}</div>
-          <div>设备名称：{{ serviceInfo.serviceName ? serviceInfo.serviceName : '未知设备' }}</div>
+          <div>当前设备：{{ serviceInfo.serviceName ?? '未知设备' }}</div>
         </div>
       </div>
       <div class="content">
-        <router-view />
+        <router-view v-slot="{ Component }">
+          <transition>
+            <component :is="Component" />
+          </transition>
+        </router-view>
       </div>
       <div class="footer">
-        Copyright @ 2024-{{ new Date().getFullYear() }} LocalTransfer. All Rights Reserved
+        Copyright &copy; {{ constants.appTitle }} {{ new Date().getFullYear() }}. All Rights
+        Reserved.
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch } from 'vue';
+import ListTile from '@renderer/components/ListTile.vue';
 import constants from '@renderer/utils/constants';
-import { useServiceInfo } from '@renderer/utils/store/service-info';
-import { useAppConfig } from '@utils/store/app-config';
+import { useAppConfig } from '@store/app-config';
+import { useServiceInfo } from '@store/service-info';
 import { storeToRefs } from 'pinia';
+import { DashboardIcon, SendIcon, SettingIcon } from 'tdesign-icons-vue-next';
+import { onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { FileDownloadIcon, FileImportIcon, SystemSettingIcon } from 'tdesign-icons-vue-next';
 
 const appConfig = useAppConfig();
+const appConfigStoreRefs = storeToRefs(appConfig);
 const serviceInfo = useServiceInfo();
 const router = useRouter();
 
 onMounted(async () => {
   // 初始化 Menu 值
   appConfig.setCurrentMenuValue('settings');
-  await serviceInfo.initInfo();
 });
 
-watch(storeToRefs(appConfig).currentMenuValue, () => {
-  router.push({
+watch(appConfigStoreRefs.currentMenuValue, () => {
+  router.replace({
     path: appConfig.currentMenuValue as string
   });
 });
@@ -76,15 +86,25 @@ watch(storeToRefs(appConfig).currentMenuValue, () => {
   @include flex(row, flex-start, flex-start);
   @include size();
   overflow: hidden;
+  background: #f7f7f7;
+}
+
+.title-bar {
+  margin-bottom: 1.6rem;
+
+  .title {
+    font-size: 1.7rem;
+    color: var(--td-text-color-brand);
+    font-weight: 700;
+  }
 }
 
 .sidebar {
   width: 20rem;
   height: 100%;
-  background-color: rgb(240, 243, 248);
-  border-top-right-radius: 10px;
-  border-bottom-right-radius: 10px;
+  background-color: #fff;
   overflow-y: auto;
+  box-shadow: 0px 3px 10px 0px rgba(0, 0, 0, 0.1);
 }
 
 .body {
@@ -95,36 +115,43 @@ watch(storeToRefs(appConfig).currentMenuValue, () => {
 }
 
 .header {
-  @include padding(1.4rem);
+  @include padding(1rem);
   width: 100%;
   flex-shrink: 0;
-  border-bottom: 1px solid #ccc;
+  border-bottom: 1px solid #ddd;
 }
 
 .current-device {
   display: flex;
-  font-size: 18px;
-  font-weight: 700;
-}
-
-.text {
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 1.6rem;
+  color: var(--td-text-color-secondary);
 }
 
 .content {
   flex: 1 0;
   width: 100%;
-  background-color: white;
+  overflow: hidden;
 }
 
 .footer {
   @include flex(row, center, center);
-  @include padding();
+  @include padding(0.8rem);
   flex-shrink: 0;
   width: 100%;
-  background-color: #ffffff;
-  border-top: 1px solid #ccc;
-  color: #ccc;
+  border-top: 1px solid #ddd;
+  font-size: 1.4rem;
+  color: var(--td-text-color-placeholder);
+}
+
+.v-enter-active,
+.v-leave-active {
+  transition: all 0.3s ease;
+  transform: translateY(0);
+}
+
+.v-enter-from,
+.v-leave-to {
+  opacity: 0;
+  transform: translateY(10%);
 }
 </style>

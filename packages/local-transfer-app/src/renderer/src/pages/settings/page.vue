@@ -1,116 +1,171 @@
 <template>
-  <div class="root">
-    <div class="row">
-      <div style="flex-shrink: 0">设备名称：</div>
-      <t-input v-model="serviceName" placeholder="未指定设备名称" :maxlength="15" />
-      <t-button style="flex-shrink: 0" :disabled="serviceName.length === 0" @click="setServiceName">
-        修改名称
-      </t-button>
-    </div>
-    <div class="row">
-      <div style="flex-shrink: 0">下载路径：</div>
-      <t-input v-model="pathType" placeholder="请选择下载路径" disabled />
-      <t-button style="flex-shrink: 0" @click="openFileDialog">修改路径</t-button>
-    </div>
+  <div class="container">
+    <PageHeader title="系统设置" />
+    <SectionCard>
+      <template #title>设备信息</template>
+      <ListTile direction="row" gap="1rem">
+        设备别名
+        <template #secondary>
+          <t-input v-model="serviceName" borderless placeholder="请输入设备别名" />
+        </template>
+      </ListTile>
+      <ListTile direction="row" gap="1rem">
+        下载目录
+        <template #secondary>
+          <t-input
+            v-model="downloadRoot"
+            readonly
+            borderless
+            placeholder="请选择下载根目录"
+            @click="chooseDownloadRootHandler"
+          />
+        </template>
+      </ListTile>
+      <ListTile direction="row" gap="1rem">
+        协议端口
+        <template #secondary>
+          <t-input
+            readonly
+            :value="serviceInfo.tcpPort"
+            borderless
+            placeholder="使用默认端口"
+            @click="changeTcpPortHandler"
+          />
+        </template>
+      </ListTile>
+      <div class="apply-bar">
+        <t-button :disabled="!enableApply" @click="applySettingsHandler">应用更改</t-button>
+      </div>
+    </SectionCard>
+    <SectionCard>
+      <template #title>版本信息</template>
+      <Versions />
+    </SectionCard>
+    <SectionCard>
+      <template #title>开发调试</template>
+      <ListTile direction="row" gap="1rem">
+        开启 e2e 调试（更详细的日志）
+        <template #secondary>
+          <t-switch v-model="enableE2E" />
+        </template>
+      </ListTile>
+      <ListTile direction="row" gap="1rem">
+        Contributors
+        <template #secondary>
+          {{ constants.contributor }}
+        </template>
+      </ListTile>
+    </SectionCard>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useServiceInfo } from '@renderer/utils/store/service-info';
 import nativeApi from '@renderer/apis/native';
+import ListTile from '@renderer/components/ListTile.vue';
+import PageHeader from '@renderer/components/PageHeader.vue';
+import SectionCard from '@renderer/components/SectionCard.vue';
+import Versions from '@renderer/components/Versions.vue';
+import constants from '@renderer/utils/constants';
 import interact from '@renderer/utils/interact';
-import { ref, onMounted } from 'vue';
+import { useServiceInfo } from '@store/service-info';
+import { onMounted } from 'vue';
+import { watch } from 'vue';
+import { computed } from 'vue';
+import { ref } from 'vue';
 
 const serviceInfo = useServiceInfo();
-const pathType = ref('downloads');
-const serviceName = ref('');
-// 获取目标目录路径
-async function getTargetPath() {
-  const localPath = localStorage.getItem('pathType');
-  if (localPath) {
-    pathType.value = localPath;
+
+const serviceName = ref(serviceInfo.serviceName);
+const downloadRoot = ref(serviceInfo.downloadRoot);
+const enableE2E = ref();
+
+// 允许应用更改（有更改项时）
+const enableApply = computed(
+  () =>
+    serviceName.value !== serviceInfo.serviceName || downloadRoot.value !== serviceInfo.downloadRoot
+);
+
+watch(enableE2E, async (value, oldValue) => {
+  if (oldValue === undefined) {
+    // 初始化，无需提示
     return;
   }
   try {
-    const path = await nativeApi.invoke.getPath('downloads');
-    pathType.value = path;
-  } catch (err) {
-    console.log(err);
-    interact.message.error(String(err));
+    if (value) {
+      await nativeApi.invoke.setRuntime('e2e');
+    } else {
+      await nativeApi.invoke.setRuntime('production');
+    }
+    interact.message.success('切换运行时成功');
+  } catch {
+    interact.message.error('切换运行时失败，请稍后重试');
   }
-}
-
-onMounted(async () => {
-  getTargetPath();
-  getServiceName();
 });
 
-// 修改设备名称
-function setServiceName() {
-  localStorage.setItem('serviceName', serviceName.value);
-  serviceInfo.setServiceName(serviceName.value);
-}
+onMounted(async () => {
+  const runtime = await nativeApi.invoke.getRuntime();
+  console.log('Current Runtime', runtime);
+  enableE2E.value = runtime === 'e2e';
+});
 
-// 获取设备名称
-async function getServiceName() {
-  const localPath = localStorage.getItem('serviceName');
-  if (localPath) {
-    serviceName.value = localPath;
-    serviceInfo.setServiceName(localPath);
-    return;
-  }
-}
-
-// 修改下载路径
-async function openFileDialog() {
-  try {
-    const result = await nativeApi.invoke.openFileDialog({
-      title: '选择文件夹',
+// 选择下载根目录
+function chooseDownloadRootHandler() {
+  nativeApi.invoke
+    .openFileDialog({
+      title: '选择下载根目录',
       buttonLabel: '选择',
-      filters: [],
+      defaultPath: downloadRoot.value,
       properties: {
-        openFile: true,
+        openFile: false,
         openDirectory: true,
-        multiSelections: true
+        multiSelections: false
       }
+    })
+    .then((res) => {
+      if (!res || res.length === 0) {
+        return;
+      }
+      downloadRoot.value = res[0];
     });
+}
 
-    if (!result || result.length === 0) {
-      interact.message.warning('用户取消选择');
-      return;
+// 更改 TCP 端口
+function changeTcpPortHandler() {
+  interact.notify.info({
+    title: '提示',
+    content: '暂不支持修改端口'
+  });
+}
+
+// 应用更改
+async function applySettingsHandler() {
+  try {
+    if (serviceName.value !== serviceInfo.serviceName) {
+      await serviceInfo.setServiceName(serviceName.value);
     }
-
-    pathType.value = result[0];
-    localStorage.setItem('pathType', result[0]);
-
-    // 更新路径设置
-    try {
-      await nativeApi.invoke.getPath('downloads');
-      interact.message.success('下载路径已更新');
-    } catch (err) {
-      interact.message.error(String(err));
-    }
-  } catch (error) {
-    interact.message.error('打开文件夹对话框出错');
+    await serviceInfo.setDownloadRoot(downloadRoot.value);
+    interact.message.success('应用设置成功');
+  } catch (err) {
+    console.log('applySettingsHandler:error', err);
+    interact.message.error('应用设置失败');
   }
 }
 </script>
 
-<style lang="scss" scoped>
-.root {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 1.2rem;
-  gap: 2rem;
-  overflow-x: hidden;
+<style scoped lang="scss">
+.container {
+  @include flex(column, flex-start, flex-start);
+  @include size();
+  @include padding(1.2rem);
+  flex-shrink: 0;
   overflow-y: auto;
+  gap: 1.2rem;
+}
 
-  .row {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    gap: 0.6rem;
-  }
+.apply-bar {
+  @include flex(row, flex-end, center);
+  @include padding(0.8rem);
+  width: 100%;
+  flex-shrink: 0;
 }
 </style>

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import constants from '../constants';
+import constants from '../utils/constants';
 
 export const useAppConfig = defineStore('app-config', () => {
   // 窗口大小

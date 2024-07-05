@@ -19,12 +19,11 @@ export default function makeInstance<T extends IpcApi>(
     get(_target: any, prop: string | symbol) {
       const curProp = prop.toString();
       return async (...params: any[]) => {
-        try {
-          return await ipcRenderer.invoke(channelName, curProp, ...params);
-        } catch (err) {
-          console.log('[IpcClient] invoke error:', err);
-          return Promise.reject(err);
+        const result = await ipcRenderer.invoke(channelName, curProp, params);
+        if (result?.retcode !== undefined && result.retcode !== 0) {
+          return Promise.reject(result);
         }
+        return result;
       };
     }
   };
@@ -49,6 +48,7 @@ export default function makeInstance<T extends IpcApi>(
 
   ipcRenderer.on(channelName, async (_event, params: Record<string, any>) => {
     const { cmd, payload } = params;
+    console.log('ipcRenderer:receive event from ipcMain:', cmd, payload);
     const eventHandlers = listenerRecords[cmd];
 
     if (!eventHandlers) {
@@ -64,7 +64,7 @@ export default function makeInstance<T extends IpcApi>(
     Promise.allSettled(promises).then((results) => {
       results.forEach((result) => {
         if (result.status === 'rejected') {
-          console.log('[IpcClient] listener error:', result.reason);
+          console.error('[IpcClient] listener error:', result.reason);
         }
       });
     });
@@ -72,6 +72,6 @@ export default function makeInstance<T extends IpcApi>(
 
   return {
     invoke: new Proxy(invoke, invokeProxyHandler),
-    bind: new Proxy(listener, bindProxyHandler)
-  } as unknown as T;
+    listener: new Proxy(listener, bindProxyHandler)
+  } as T;
 }

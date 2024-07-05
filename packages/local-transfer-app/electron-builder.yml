@@ -1,5 +1,6 @@
 appId: com.ccweng.local-transfer
-productName: 内网文件同传
+productName: LocalTransfer内网同传
+copyright: "2024 (c) LocalTransfer"
 directories:
   buildResources: build
 files:
@@ -12,12 +13,19 @@ files:
 asarUnpack:
   - resources/**
 win:
-  executableName: 内网文件同传
+  executableName: LocalTransfer内网同传
+  target:
+    # portable 是免安装的
+    - portable
+    # nsis 是带安装程序的
+    - nsis
 nsis:
+  oneClick: false
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
+  allowToChangeInstallationDirectory: true
 mac:
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
@@ -33,7 +41,7 @@ linux:
     - AppImage
     - snap
     - deb
-  maintainer: ccweng
+  maintainer: "Weng Hang, Xie Shengru, Peng Weiqin, Xie Wanli, Zhong Chaoli"
   category: Utility
 appImage:
   artifactName: ${name}-${version}.${ext}

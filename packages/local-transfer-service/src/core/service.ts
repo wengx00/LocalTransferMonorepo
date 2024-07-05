@@ -84,6 +84,9 @@ export interface IService {
   removeAvailableServicesUpdateHandler(
     handler: AvailableServiceUpdateHandler,
   ): void;
+
+  // 关闭服务
+  dispose(): void;
 }
 
 /**
@@ -107,9 +110,31 @@ export class Service implements IService {
     });
   }
 
+  dispose(): void {
+    this.udpSocket.send(
+      JsonResponse.ok({
+        type: UdpMessage.SERVICE_DEAD,
+        info: {
+          id: this.id,
+          name: this.name,
+          ip: ip.address('public', 'ipv4'),
+        },
+      }).toJSON(),
+      25,
+      '255.255.255.255', // 广播
+      () => {
+        this.udpSocket.close();
+      },
+    );
+    this.tcpServer.close();
+  }
+
   addAvailableServicesUpdateHandler(
     handler: AvailableServiceUpdateHandler,
   ): void {
+    if (process.env.RUNTIME === 'e2e') {
+      console.log('[e2e] addAvailableServicesUpdateHandler', handler);
+    }
     this.availableServicesUpdateHandlers.add(handler);
   }
 
@@ -182,7 +207,7 @@ export class Service implements IService {
         if (status !== ProtocolStatus.DONE) {
           if (process.env.RUNTIME === 'e2e') {
             console.log(
-              '接收 TransferInfo 片段: ',
+              '[e2e] 接收 TransferInfo 片段: ',
               buffer.length,
               '总长度: ',
               total,
@@ -246,7 +271,10 @@ export class Service implements IService {
 
       socket.on('connect', () => {
         if (process.env.RUNTIME === 'e2e') {
-          console.log('TCP Socket 已建立... 发送 TransferInfo', transferInfo);
+          console.log(
+            '[e2e] TCP Socket 已建立... 发送 TransferInfo',
+            transferInfo,
+          );
         }
         proxy.sendBytes(JSON.stringify(transferInfo));
       });
@@ -271,6 +299,22 @@ export class Service implements IService {
 
   setName(name: string): void {
     this.name = name;
+    // 通知其他设备
+    if (process.env.RUNTIME === 'e2e') {
+      console.log('[e2e] 更改设备名称至:', name);
+    }
+    this.udpSocket.send(
+      JsonResponse.ok({
+        type: UdpMessage.SERVICE_RENAME,
+        info: {
+          id: this.id,
+          name: this.name,
+          ip: ip.address('public', 'ipv4'),
+        },
+      }).toJSON(),
+      25,
+      '255.255.255.255', // 广播
+    );
   }
 
   setTcpPort(port: number): void {
@@ -386,7 +430,7 @@ export class Service implements IService {
           // 需要接受一次合法性检验才能开始发送
           if (done) {
             if (process.env.RUNTIME === 'e2e') {
-              console.log('接收已结束但仍接收到发包');
+              console.log('[e2e] 接收已结束但仍接收到发包');
             }
             return;
           }
@@ -402,7 +446,7 @@ export class Service implements IService {
           if (status !== ProtocolStatus.DONE) {
             if (process.env.RUNTIME === 'e2e') {
               console.log(
-                '接收 TransferInfo 片段',
+                '[e2e] 接收 TransferInfo 片段',
                 buffer.length,
                 '总长度: ',
                 total,
@@ -417,7 +461,7 @@ export class Service implements IService {
             ) as JsonResponse;
             if (retcode !== 0) {
               if (process.env.RUNTIME === 'e2e') {
-                console.log('目标设备不信任本机', retcode, errMsg);
+                console.log('[e2e] 目标设备不信任本机', retcode, errMsg);
               }
               reject(JsonResponse.fail(retcode, errMsg));
               socket.end();
@@ -486,7 +530,10 @@ export class Service implements IService {
 
         socket.on('connect', () => {
           if (process.env.RUNTIME === 'e2e') {
-            console.log('TCP Socket 已建立... 发送 TransferInfo', transferInfo);
+            console.log(
+              '[e2e] TCP Socket 已建立... 发送 TransferInfo',
+              transferInfo,
+            );
           }
           proxy.sendBytes(JSON.stringify(transferInfo));
         });
@@ -495,6 +542,8 @@ export class Service implements IService {
   }
 
   refresh(): void {
+    // 清空可用列表
+    this.availableServices = [];
     this.udpSocket.send(
       JsonResponse.ok({
         type: UdpMessage.SEARCH_FOR_AVAILABLE_SERVICE,
@@ -504,7 +553,7 @@ export class Service implements IService {
           ip: ip.address('public', 'ipv4'),
         },
       }).toJSON(),
-      86,
+      25,
       '255.255.255.255', // 广播
     );
   }
@@ -570,7 +619,7 @@ export class Service implements IService {
         remote.address = ipSeq[ipSeq.length - 1];
       }
       if (process.env.RUNTIME === 'e2e') {
-        console.log('Socket connected: ', remote.address, remote.port);
+        console.log('[e2e] Socket connected: ', remote.address, remote.port);
       }
       const proxy = new Protocol(socket);
 
@@ -613,7 +662,7 @@ export class Service implements IService {
           if (status !== ProtocolStatus.DONE) {
             if (process.env.RUNTIME === 'e2e') {
               console.log(
-                '接收 TransferInfo 片段',
+                '[e2e] 接收 TransferInfo 片段',
                 buffer.length,
                 '总长度: ',
                 total,
@@ -622,11 +671,14 @@ export class Service implements IService {
             return;
           }
           if (process.env.RUNTIME === 'e2e') {
-            console.log('接收 TransferInfo 完毕');
+            console.log('[e2e] 接收 TransferInfo 完毕');
           }
           try {
             if (process.env.RUNTIME === 'e2e') {
-              console.log('TransferInfo 原始字符串: ', chunk.toString('utf-8'));
+              console.log(
+                '[e2e] TransferInfo 原始字符串: ',
+                chunk.toString('utf-8'),
+              );
             }
             transferInfo = JSON.parse(chunk.toString('utf-8'));
             console.log('TransferInfo: ', transferInfo);
@@ -637,7 +689,7 @@ export class Service implements IService {
             ) {
               if (process.env.RUNTIME === 'e2e') {
                 console.log(
-                  '源 ID 不在受信列表中: ',
+                  '[e2e] 源 ID 不在受信列表中: ',
                   transferInfo?.sourceId,
                   'IP: ',
                   remote.address,
@@ -657,7 +709,7 @@ export class Service implements IService {
             }
             if (process.env.RUNTIME === 'e2e') {
               console.log(
-                '源 ID 在受信列表中: ',
+                '[e2e] 源 ID 在受信列表中: ',
                 transferInfo?.sourceId,
                 'IP: ',
                 remote.address,
@@ -669,35 +721,37 @@ export class Service implements IService {
             transferInfo = null;
             chunk = Buffer.alloc(0);
             if (process.env.RUNTIME === 'e2e') {
-              console.log('无法解析的 TransferInfo');
+              console.log('[e2e] 无法解析的 TransferInfo');
             }
             socket.end();
             return;
           } finally {
             chunk = Buffer.alloc(0);
           }
+          return;
         }
-        if (transferInfo!.type === TransferType.FILE && !writePath) {
+        batchId = transferInfo.batchId;
+        if (transferInfo.type === TransferType.FILE && !writePath) {
           // batchId和时间戳附加到原始文件名
           writePath = resolve(
             this.downloadRoot,
-            `${transferInfo!.batchId}-${+new Date()}-${transferInfo!.filename}`,
+            `${transferInfo.batchId}-${+new Date()}-${transferInfo.filename}`,
           );
         }
-        if (transferInfo!.type === TransferType.FILE && !writeStream) {
+        if (transferInfo.type === TransferType.FILE && !writeStream) {
           writeStream = createWriteStream(writePath);
         }
 
         writeStream?.write(buffer);
 
         // 接收 TEXT 时直接写入 Buffer
-        if (transferInfo!.type === TransferType.TEXT) {
+        if (transferInfo.type === TransferType.TEXT) {
           chunk = Buffer.concat([chunk, buffer]);
         }
 
         const done = status === ProtocolStatus.DONE;
 
-        if (transferInfo!.type === TransferType.FILE) {
+        if (transferInfo.type === TransferType.FILE) {
           // 只有接收 FILE 时需要回调 onProgress，接收 TEXT 时不需要
           const currentTime = +new Date();
           if (lastReceivedTime === 0) {
@@ -729,7 +783,7 @@ export class Service implements IService {
         if (done) {
           // 已经写入了最后一个buffer
 
-          if (transferInfo!.type === TransferType.TEXT) {
+          if (transferInfo.type === TransferType.TEXT) {
             const text = chunk.toString('utf-8');
 
             this.receiveTextHandlers.forEach((handler) => {
@@ -799,6 +853,9 @@ export class Service implements IService {
         // 忽略本机 IP 的发包
         const localIp = ip.address('public', 'ipv4');
         if (localIp === rinfo.address) {
+          if (process.env.RUNTIME === 'e2e') {
+            console.log('[e2e] UDP Socket Received Local Message.');
+          }
           return;
         }
 
@@ -812,6 +869,9 @@ export class Service implements IService {
             type?: UdpMessage;
             info?: ServiceInfo;
           };
+          if (process.env.RUNTIME === 'e2e') {
+            console.log('[e2e] UDP Socket Received Message:', message);
+          }
 
           if (retcode !== 0 || errMsg) {
             // 有错误的回包直接丢弃
@@ -831,7 +891,7 @@ export class Service implements IService {
                     port: this.tcpPort,
                   },
                 }).toJSON(),
-                rinfo.port,
+                25,
                 rinfo.address,
               );
               if (info) {
@@ -846,10 +906,15 @@ export class Service implements IService {
                     port: info.port,
                     name: info.name,
                   });
-                  this.availableServicesUpdateHandlers.forEach((handler) => {
-                    handler();
-                  });
+                } else {
+                  // 更新一波已有的记录
+                  target.ip = rinfo.address;
+                  target.port = info.port;
+                  target.name = info.name;
                 }
+                this.availableServicesUpdateHandlers.forEach((handler) => {
+                  handler();
+                });
               }
               break;
             case UdpMessage.SERVICE_DEAD:
@@ -857,20 +922,19 @@ export class Service implements IService {
               this.availableServices = this.availableServices.filter(
                 ({ ip }) => ip !== rinfo.address,
               );
-              this.availableServicesUpdateHandlers.forEach((handler) => {
-                handler();
-              });
               this.verifiedServices = this.verifiedServices.filter(
                 ({ ip }) => ip !== rinfo.address,
               );
+              this.availableServicesUpdateHandlers.forEach((handler) => {
+                handler();
+              });
               break;
-            case UdpMessage.TELL_AVAILABLE_SERVICE:
+            case UdpMessage.TELL_AVAILABLE_SERVICE: {
               // 有新的可用 Service，添加可用记录
               if (!info) {
                 // 无效包，丢弃
                 break;
               }
-              // eslint-disable-next-line no-case-declarations
               const target = this.availableServices.find(
                 ({ id }) => id === info.id,
               );
@@ -881,16 +945,44 @@ export class Service implements IService {
                   port: info.port,
                   name: info.name,
                 });
-                this.availableServicesUpdateHandlers.forEach((handler) => {
-                  handler();
-                });
               } else {
                 // 使用引用更新一波已有的记录
                 target.ip = rinfo.address;
                 target.port = info.port;
                 target.name = info.name;
               }
+              this.availableServicesUpdateHandlers.forEach((handler) => {
+                handler();
+              });
               break;
+            }
+            case UdpMessage.SERVICE_RENAME: {
+              if (!info) {
+                return;
+              }
+              if (process.env.RUNTIME === 'e2e') {
+                console.log('[e2e] 远程服务器更改名称');
+              }
+              const target = this.availableServices.find(
+                ({ id }) => id === info.id,
+              );
+              if (!target) {
+                this.availableServices.push({
+                  id: info.id,
+                  ip: rinfo.address,
+                  port: info.port,
+                  name: info.name,
+                });
+              } else {
+                target.ip = rinfo.address;
+                target.port = info.port;
+                target.name = info.name;
+              }
+              this.availableServicesUpdateHandlers.forEach((handler) => {
+                handler();
+              });
+              break;
+            }
             default:
           }
         } catch (err) {
@@ -906,10 +998,10 @@ export class Service implements IService {
       if (process.env.RUNTIME === 'test') {
         return;
       }
-      // UDP 只能使用熟知端口 86
-      this.udpSocket.bind(86, () => {
+      // UDP 只能使用熟知端口 25
+      this.udpSocket.bind(25, '0.0.0.0', () => {
         console.log(
-          `UDP Server listening on ${ip.address('public', 'ipv4')}:86`,
+          `UDP Server listening on ${ip.address('public', 'ipv4')}:25`,
         );
         // 开启广播收发能力
         this.udpSocket.setBroadcast(true);

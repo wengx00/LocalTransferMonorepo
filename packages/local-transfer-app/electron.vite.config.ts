@@ -21,7 +21,8 @@ export default defineConfig(({ mode }) => ({
         '@assets': resolve('src/renderer/src/assets'),
         '@components': resolve('src/renderer/src/components'),
         '@shared': resolve('src/shared'),
-        '@apis': resolve('src/renderer/src/apis')
+        '@apis': resolve('src/renderer/src/apis'),
+        '@store': resolve('src/renderer/src/store')
       }
     },
     plugins: [vue()],

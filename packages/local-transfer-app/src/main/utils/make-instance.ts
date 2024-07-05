@@ -1,4 +1,5 @@
 import { WebContents, ipcMain } from 'electron';
+import { JsonResponse } from 'local-transfer-service';
 
 export default function makeInstance<T extends IpcApi>(
   namespace: string,
@@ -9,9 +10,18 @@ export default function makeInstance<T extends IpcApi>(
 
   const channelName = `ns-${namespace}-${0}`;
 
-  ipcMain.handle(channelName, async (_event, cmd: string, ...args: any[]) => {
+  ipcMain.handle(channelName, async (_event, cmd: string, args: any) => {
     if (helper.handler[cmd]) {
-      return await helper.handler[cmd](...args);
+      try {
+        return await helper.handler[cmd](...args);
+      } catch (err: any) {
+        console.log('[IpcMain] handle error:', err);
+        if (err?.retcode !== undefined) {
+          return err;
+        } else {
+          return JsonResponse.fail(500, 'IPC接口调用异常');
+        }
+      }
     }
   });
 
@@ -19,13 +29,15 @@ export default function makeInstance<T extends IpcApi>(
     get(_target: any, prop: string | symbol) {
       const curProp = prop.toString();
       return (payload: any) => {
+        console.log('ipcMain emitter emit', curProp, payload);
         try {
-          webContents?.emit(channelName, {
+          webContents!.send(channelName, {
             cmd: curProp,
             payload
           });
         } catch (err) {
-          console.log('[IpcMain] emit error:', err);
+          console.error('[IpcMain] emit error:', err);
+          throw err;
         }
       };
     }

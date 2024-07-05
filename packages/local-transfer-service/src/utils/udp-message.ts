@@ -2,6 +2,7 @@ enum UdpMessage {
   SEARCH_FOR_AVAILABLE_SERVICE,
   TELL_AVAILABLE_SERVICE,
   SERVICE_DEAD,
+  SERVICE_RENAME,
 }
 
 export default UdpMessage;

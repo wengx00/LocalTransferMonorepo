@@ -1,0 +1,116 @@
+.container {
+  @include flex(column, flex-start, flex-start);
+  @include size();
+  @include padding(1.2rem);
+  flex-shrink: 0;
+  overflow: hidden;
+  gap: 1.2rem;
+}
+
+.receive-aio {
+  @include flex(row, flex-start, flex-start);
+  width: 100%;
+  flex: 1 0;
+  gap: 1.2rem;
+  overflow: hidden;
+
+  .services-root {
+    @include flex(column, flex-start, flex-start);
+    height: 100%;
+    flex: 1 0;
+    gap: 1.2rem;
+    overflow: hidden;
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    .header {
+      @include flex(row, space-between, center);
+      width: 100%;
+      flex-shrink: 0;
+    }
+
+    .content-primary {
+      @include flex(row, flex-start, center);
+      width: 100%;
+      overflow: hidden;
+
+      .checkbox {
+        flex-shrink: 0;
+      }
+      .name {
+        flex: 1 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+
+    .refresh {
+      cursor: pointer;
+
+      &:hover {
+        color: var(--td-brand-color);
+      }
+      &.spin {
+        animation: spin 1s linear infinite;
+      }
+    }
+
+    .content {
+      @include flex(column, flex-start, flex-start);
+      width: 100%;
+      flex: 1 0;
+      overflow-x: hidden;
+      overflow-y: auto;
+      gap: 0.8rem;
+    }
+  }
+
+  .files-root {
+    @include flex(column, flex-start, center);
+    height: 100%;
+    flex: 1 0;
+    overflow: hidden;
+    gap: 1.2rem;
+
+    .header {
+      @include flex(row, space-between, center);
+      width: 100%;
+      flex-shrink: 0;
+    }
+
+    .content {
+      @include flex(column, flex-start, flex-start);
+      width: 100%;
+      flex: 1 0;
+      overflow-x: hidden;
+      overflow-y: auto;
+      gap: 0.8rem;
+      
+      .item {
+        @include padding(0.8rem 0.4rem);
+        border-bottom: 1px solid var(--td-border-level-1-color);
+        &:last-child {
+          border-bottom: none;
+        }
+      }
+    }
+
+  }
+  .list-enter-active,
+  .list-leave-active {
+    transition: all 0.3s ease;
+  }
+  .list-enter-from,
+  .list-leave-to {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+}
