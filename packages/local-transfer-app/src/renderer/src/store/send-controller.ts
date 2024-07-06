@@ -99,7 +99,7 @@ export const useSendController = defineStore('send-controller', () => {
   }
 
   async function sendText(text: string, targetId: string) {
-    console.log('触发文本发送任务', text);
+    console.log('触发文本发送任务', text, targetId);
     try {
       await serviceApi.invoke.sendText({
         text,

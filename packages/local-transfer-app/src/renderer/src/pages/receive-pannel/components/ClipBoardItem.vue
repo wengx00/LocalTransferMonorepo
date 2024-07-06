@@ -26,7 +26,7 @@ const emit = defineEmits<{
   @include flex(column, flex-start, flex-start);
   @include padding(0.8rem);
   position: relative;
-  white-space: wrap;
+  white-space: pre-wrap;
   width: 100%;
   height: fit-content;
   flex-shrink: 0;
