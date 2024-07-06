@@ -35,7 +35,7 @@ export const useReceiveController = defineStore('receive-controller', () => {
     if (error) {
       interact.notify.error({
         title: '接收文件失败',
-        content: `接收 ${filename} 失败，错误信息：${error}`
+        content: `接收 ${filename} 失败，错误信息：${error.errMsg}`
       });
       // 出错时把记录删了
       taskMap.value.delete(batchId);

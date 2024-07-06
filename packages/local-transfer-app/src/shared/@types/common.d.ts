@@ -4,7 +4,7 @@ interface IpcApi {
 }
 
 interface IpcMainApi<T extends IpcApi> {
-  emitter: Record<keyof T['listener'], (payload: any) => any>;
+  emitter: Record<keyof T['listener'], (...payload: any[]) => any>;
 }
 
 interface IpcMainHelper<T extends IpcApi> {

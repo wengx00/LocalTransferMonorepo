@@ -819,8 +819,12 @@ export class Service implements IService {
         proxy.removeHandler(receiveHandler);
         // 从任务表中清除
         this.transferTasks.delete(batchId);
+        if (process.env.RUNTIME === 'e2e') {
+          console.log('[e2e] Socket end. totalReceivedBytes:', receivedBytes);
+        }
         if (transferInfo && transferInfo.size > receivedBytes) {
           // 没发完就结束了
+          console.log('投送任务被中断');
           this.receiveFileHandlers.forEach((handler) => {
             handler(
               transferInfo as any,

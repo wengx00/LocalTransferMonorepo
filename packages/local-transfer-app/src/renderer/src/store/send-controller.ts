@@ -1,5 +1,10 @@
 import serviceApi from '@renderer/apis/service';
-import { SendFileException, SendTextException, TransferInfo } from 'local-transfer-service';
+import {
+  SendFileException,
+  SendFileResult,
+  SendTextException,
+  TransferInfo
+} from 'local-transfer-service';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import interact from '../utils/interact';
@@ -62,7 +67,15 @@ export const useSendController = defineStore('send-controller', () => {
         targetId
       });
       console.log('发送文件结果', result);
-      const { batchId, filename, cost } = result;
+      const { batchId, filename, cost, reason } = result as SendFileResult & SendFileException;
+      if (reason) {
+        interact.notify.error({
+          title: '文件发送失败',
+          content: reason
+        });
+        taskMap.value.delete(batchId);
+        return;
+      }
       interact.notify.success({
         title: '投送成功',
         content: `${filename}发送成功，耗时：${cost}s`

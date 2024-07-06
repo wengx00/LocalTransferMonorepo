@@ -16,11 +16,10 @@ export default function makeInstance<T extends IpcApi>(
         return await helper.handler[cmd](...args);
       } catch (err: any) {
         console.log('[IpcMain] handle error:', err);
-        if (err?.retcode !== undefined) {
+        if (err?.retcode !== undefined || err?.reason) {
           return err;
-        } else {
-          return JsonResponse.fail(500, 'IPC接口调用异常');
         }
+        return JsonResponse.fail(500, 'IPC接口调用异常');
       }
     }
   });
@@ -28,7 +27,7 @@ export default function makeInstance<T extends IpcApi>(
   const emitterProxyHandler = {
     get(_target: any, prop: string | symbol) {
       const curProp = prop.toString();
-      return (payload: any) => {
+      return (...payload: any[]) => {
         console.log('ipcMain emitter emit', curProp, payload);
         try {
           webContents!.send(channelName, {
