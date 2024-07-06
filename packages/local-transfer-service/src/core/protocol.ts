@@ -9,6 +9,7 @@ export enum ProtocolStatus {
   HEADER_PENDING,
   BODY_PENDING,
   DONE,
+  CANCELLED,
 }
 
 /**
@@ -184,7 +185,7 @@ export class Protocol {
             reject(
               new ProtocolException(
                 'send',
-                this.sendStatus,
+                ProtocolStatus.CANCELLED,
                 new Error('Protocol Aborted.'),
               ),
             );

@@ -20,7 +20,12 @@ import { resolve } from 'path';
 import * as ip from 'ip';
 import { nanoid } from 'nanoid';
 
-import { HandlerContext, Protocol, ProtocolStatus } from './protocol';
+import {
+  HandlerContext,
+  Protocol,
+  ProtocolException,
+  ProtocolStatus,
+} from './protocol';
 import errcode from '../utils/errcode';
 import JsonResponse from '../utils/json-response';
 import {
@@ -475,15 +480,9 @@ export class Service implements IService {
                   progress: percent,
                   speed,
                 });
-                // 探测是否被取消发送
                 if (transferTasks.get(batchId)?.cancelled) {
                   abort();
                   setTimeout(() => socket.end());
-                  // eslint-disable-next-line prefer-promise-reject-errors
-                  reject({
-                    reason: '用户取消发送',
-                    batchId,
-                  });
                   transferTasks.delete(batchId);
                 }
               },
@@ -491,7 +490,16 @@ export class Service implements IService {
                 abort = trigger;
               },
             });
-          } catch (err) {
+          } catch (err: any) {
+            const error: ProtocolException = err;
+            if (error.status === ProtocolStatus.CANCELLED) {
+              // eslint-disable-next-line prefer-promise-reject-errors
+              reject({
+                reason: '用户取消发送',
+                batchId,
+              });
+              return;
+            }
             console.log('发送文件时出错', err);
           } finally {
             done = true;
@@ -798,18 +806,16 @@ export class Service implements IService {
           writeStream?.close();
           // 重置状态
           writeStream = null;
-          transferInfo = null;
           writePath = '';
           batchId = '';
           lastReceivedTime = 0;
-          receivedBytes = 0;
           chunk = Buffer.alloc(0);
         }
       };
 
       proxy.addHandler(receiveHandler);
 
-      socket.on('close', () => {
+      socket.on('end', () => {
         proxy.removeHandler(receiveHandler);
         // 从任务表中清除
         this.transferTasks.delete(batchId);
@@ -822,6 +828,8 @@ export class Service implements IService {
             );
           });
         }
+        transferInfo = null;
+        receivedBytes = 0;
       });
 
       socket.on('error', (err) => {
