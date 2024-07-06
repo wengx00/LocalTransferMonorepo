@@ -5,7 +5,7 @@
       :key="item.batchId"
       :label="item.filename"
       :progress="item.progress"
-      :target-id="'1'"
+      :target-id="item.targetId"
       :speed="item.speed"
     />
     <EmptyList

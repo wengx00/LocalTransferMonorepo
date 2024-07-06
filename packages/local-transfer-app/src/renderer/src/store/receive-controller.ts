@@ -10,7 +10,7 @@ export interface ReceiveTask {
   speed: number;
   size: number;
   filename: string;
-  sourceServiceName: string;
+  sourceId: string;
   // 过期时间
   expireAfter: number;
 }
@@ -53,15 +53,14 @@ export const useReceiveController = defineStore('receive-controller', () => {
     }
     let record: ReceiveTask | undefined = taskMap.value.get(batchId);
     if (!record) {
-      const availableServices = await serviceApi.invoke.getAvailableServices();
-      const target = availableServices.find(({ id }) => id === sourceId);
       record = {
         batchId,
-        progress,
+        // 防止跳变，不保留小数点
+        progress: Number(progress.toFixed(0)),
         speed,
         size,
         filename,
-        sourceServiceName: target?.name || '未知设备',
+        sourceId,
         expireAfter: +new Date() + taskTtl
       };
       // 新增记录
@@ -72,7 +71,7 @@ export const useReceiveController = defineStore('receive-controller', () => {
     taskMap.value.set(batchId, {
       ...record,
       speed,
-      progress,
+      progress: Number(progress.toFixed(0)),
       expireAfter: +new Date() + taskTtl // 刷新 TTL
     });
   };

@@ -10,7 +10,7 @@ export interface SendTask {
   speed: number; // 单位 KB/s
   size: number; // 单位 B
   filename: string;
-  targetServiceName: string; // 目标设备别名
+  targetId: string;
 }
 
 export const useSendController = defineStore('send-controller', () => {
@@ -20,7 +20,7 @@ export const useSendController = defineStore('send-controller', () => {
   // 任务列表
   const taskList = computed(() => Array.from(taskMap.value.values()));
 
-  function onLaunchHandler({ filename, batchId, size }: TransferInfo) {
+  function onLaunchHandler({ filename, batchId, size, targetId }: TransferInfo) {
     if (taskMap.value.has(batchId)) {
       // 重复 Launch？这是个么得可能的情况
       return;
@@ -31,8 +31,7 @@ export const useSendController = defineStore('send-controller', () => {
       size,
       progress: 0,
       speed: 0,
-      // TODO: ServiceApi 需要支持
-      targetServiceName: ''
+      targetId
     });
   }
 

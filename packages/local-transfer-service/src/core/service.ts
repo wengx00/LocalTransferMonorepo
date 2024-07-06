@@ -34,60 +34,9 @@ import {
   ServiceInfo,
   TransferInfo,
   TransferType,
+  IService,
 } from '../utils/type';
 import UdpMessage from '../utils/udp-message';
-
-export interface IService {
-  getId(): string;
-
-  getName(): string;
-
-  setName(name: string): void;
-
-  setTcpPort(port: number): void;
-
-  getTcpPort(): number;
-
-  setDownloadRoot(downloadRoot: string): void;
-
-  getDownloadRoot(): string;
-
-  // 刷新可用设备列表
-  refresh(): void;
-  // 获取可用设备列表
-  getAvailableServices(): ServiceInfo[];
-  // 获取受信设备列表
-  getVerifiedDevices(): ServiceInfo[];
-  // 添加受信设备
-  addVerifiedDevice(id: string): ServiceInfo[];
-  // 删除受信设备
-  removeVerifiedDevice(id: string): ServiceInfo[];
-  // 清空受信列表
-  clearVerifiedDevices(): ServiceInfo[];
-  // 指定目标发送文件
-  sendFile(request: SendFileRequest): Promise<SendFileResult>;
-  // 注册接收文件监听器
-  addReceiveFileHandler(handler: ReceiveFileHandler): void;
-  // 注册接收文本监听器
-  addReceiveTextHandler(handler: ReceiveTextHandler): void;
-  // 删除接收文件监听器
-  removeFileReceiveHandler(handler: ReceiveFileHandler): void;
-  // 删除接收文本监听器
-  removeReceiveTextHandler(handler: ReceiveTextHandler): void;
-  // 发送文本
-  sendText(request: SendTextRequest): Promise<SendTextResult>;
-  // 注册可用服务更新监听器
-  addAvailableServicesUpdateHandler(
-    handler: AvailableServiceUpdateHandler,
-  ): void;
-  // 删除可用服务更新监听器
-  removeAvailableServicesUpdateHandler(
-    handler: AvailableServiceUpdateHandler,
-  ): void;
-
-  // 关闭服务
-  dispose(): void;
-}
 
 /**
  * 服务选项
@@ -176,6 +125,7 @@ export class Service implements IService {
         batchId,
         type: TransferType.TEXT,
         sourceId: this.id,
+        targetId,
       };
 
       const socket = createConnection({
@@ -408,6 +358,7 @@ export class Service implements IService {
           size: res.size,
           type: TransferType.FILE,
           sourceId: this.id,
+          targetId,
         };
 
         console.log('TransferInfo: ', transferInfo);

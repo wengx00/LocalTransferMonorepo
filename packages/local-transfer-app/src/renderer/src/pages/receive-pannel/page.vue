@@ -52,7 +52,7 @@
               class="item"
               :label="item.filename"
               :progress="item.progress"
-              :target-id="'1'"
+              :target-id="item.sourceId"
             />
           </transition-group>
         </template>
