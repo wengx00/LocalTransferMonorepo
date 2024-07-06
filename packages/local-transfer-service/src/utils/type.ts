@@ -106,6 +106,8 @@ export interface SendFileResult extends TransferInfo {
 export interface SendFileException extends TransferInfo {
   // 失败原因
   reason: string;
+  // batchId
+  batchId: string;
 }
 
 // 发送文本的请求和响应类型

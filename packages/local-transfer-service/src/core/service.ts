@@ -37,6 +37,7 @@ import {
   IService,
   ServiceOptions,
   TaskStatus,
+  SendFileException,
 } from '../utils/type';
 import UdpMessage from '../utils/udp-message';
 
@@ -461,9 +462,12 @@ export class Service implements IService {
                 });
               },
               onError(err) {
-                reject(
-                  JsonResponse.fail(errcode.PROTOCOL_EXCEPTION, err.message),
-                );
+                console.log('发送文件时出错', err);
+                // eslint-disable-next-line prefer-promise-reject-errors
+                reject({
+                  reason: '发送文件时出错',
+                  batchId,
+                } as SendFileException);
               },
               onProgress(percent, speed) {
                 onProgress?.({
@@ -475,9 +479,12 @@ export class Service implements IService {
                 if (transferTasks.get(batchId)?.cancelled) {
                   abort();
                   setTimeout(() => socket.end());
-                  reject(
-                    JsonResponse.fail(errcode.TASK_CANCELLED, '任务已取消'),
-                  );
+                  // eslint-disable-next-line prefer-promise-reject-errors
+                  reject({
+                    reason: '用户取消发送',
+                    batchId,
+                  });
+                  transferTasks.delete(batchId);
                 }
               },
               getAbort(trigger) {
@@ -802,7 +809,7 @@ export class Service implements IService {
 
       proxy.addHandler(receiveHandler);
 
-      socket.on('end', () => {
+      socket.on('close', () => {
         proxy.removeHandler(receiveHandler);
         // 从任务表中清除
         this.transferTasks.delete(batchId);
