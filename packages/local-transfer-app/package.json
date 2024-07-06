@@ -2,7 +2,7 @@
   "name": "local-transfer-app",
   "private": true,
   "version": "1.0.0",
-  "description": "An Electron application with Vue and TypeScript",
+  "description": "跨平台内网隔空投送工具",
   "main": "./out/main/index.js",
   "author": "ccweng",
   "homepage": "",
