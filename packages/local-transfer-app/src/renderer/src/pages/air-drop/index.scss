@@ -41,6 +41,14 @@
       flex-shrink: 0;
     }
 
+    .list {
+      @include flex(column, flex-start, flex-start);
+      flex: 1 0;
+      width: 100%;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+
     .content-primary {
       @include flex(row, flex-start, center);
       width: 100%;

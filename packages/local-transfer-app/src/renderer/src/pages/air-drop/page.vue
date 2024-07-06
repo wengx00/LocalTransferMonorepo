@@ -22,7 +22,7 @@
             />
           </div>
         </template>
-        <transition-group name="list">
+        <transition-group name="list" tag="div" class="list">
           <ListTile v-for="item in serviceList" :key="item.id">
             <div class="content-primary">
               <t-checkbox v-model="item.selected" class="checkbox" />
