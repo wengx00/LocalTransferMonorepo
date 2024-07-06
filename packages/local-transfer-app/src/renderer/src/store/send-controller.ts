@@ -1,5 +1,5 @@
 import serviceApi from '@renderer/apis/service';
-import { SendFileException, TransferInfo } from 'local-transfer-service';
+import { SendFileException, SendTextException, TransferInfo } from 'local-transfer-service';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import interact from '../utils/interact';
@@ -64,7 +64,7 @@ export const useSendController = defineStore('send-controller', () => {
       console.log('发送文件结果', result);
       const { batchId, filename, cost } = result;
       interact.notify.success({
-        title: '发送成功',
+        title: '投送成功',
         content: `${filename}发送成功，耗时：${cost}s`
       });
       // 无论成功失败都直接删除记录
@@ -73,14 +73,14 @@ export const useSendController = defineStore('send-controller', () => {
       console.log('发送文件时失败', err);
       if (err?.errMsg) {
         interact.notify.error({
-          title: '发送失败',
+          title: '文件发送失败',
           content: err.errMsg
         });
         return;
       }
       const { filename, reason, batchId } = err as SendFileException;
       interact.notify.error({
-        title: '发送失败',
+        title: '文件发送失败',
         content: `${filename || path}发送失败，错误信息：${reason || 'IPC接口调用异常'}`
       });
       // 无论成功失败都直接删除记录
@@ -98,10 +98,38 @@ export const useSendController = defineStore('send-controller', () => {
     };
   }
 
+  async function sendText(text: string, targetId: string) {
+    console.log('触发文本发送任务', text);
+    try {
+      await serviceApi.invoke.sendText({
+        text,
+        targetId
+      });
+      interact.notify.success({
+        title: '投送成功',
+        content: `文本投送成功`
+      });
+    } catch (err: any) {
+      if (err?.errMsg) {
+        interact.notify.error({
+          title: '文本发送失败',
+          content: err.errMsg
+        });
+        return;
+      }
+      const { reason } = err as SendTextException;
+      interact.notify.error({
+        title: '文本发送失败',
+        content: `文本发送失败，错误信息：${reason || 'IPC接口调用异常'}`
+      });
+    }
+  }
+
   return {
     taskList,
 
     sendFile,
+    sendText,
     registryListener
   };
 });

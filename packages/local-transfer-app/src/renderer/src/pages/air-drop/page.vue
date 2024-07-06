@@ -2,11 +2,16 @@
   <div class="container">
     <div class="title-bar">
       <PageHeader style="flex: 1 0" title="隔空投送" />
-      <t-button shape="circle" style="flex-shrink: 0" @click="toggleProgressPopup">
-        <template #icon>
-          <RocketIcon />
-        </template>
-      </t-button>
+      <div class="row">
+        <t-button variant="outline" style="flex-shrink: 0" @click="toggleVision">
+          切换{{ currentVision === 'file' ? '文本' : '文件' }}模式
+        </t-button>
+        <t-button shape="circle" style="flex-shrink: 0" @click="toggleProgressPopup">
+          <template #icon>
+            <RocketIcon />
+          </template>
+        </t-button>
+      </div>
     </div>
     <div class="airdrop-aio">
       <SectionCard class="services-root">
@@ -33,11 +38,11 @@
         </transition-group>
         <EmptyList v-if="serviceList.length === 0" title="暂无可用设备" />
       </SectionCard>
-      <SectionCard class="files-root">
+      <SectionCard v-if="currentVision === 'file'" class="files-root">
         <template #title>
           <div class="header">
             投送文件
-            <t-button :disabled="filePaths.length === 0" @click="airdrop">
+            <t-button :disabled="filePaths.length === 0" @click="airdrop('file')">
               <template #icon>
                 <CloudUploadIcon />
               </template>
@@ -55,6 +60,30 @@
               <CloseIcon class="close" @click="cancelFile(index)" />
             </div>
           </t-popup>
+        </div>
+      </SectionCard>
+      <SectionCard v-else class="files-root">
+        <template #title>
+          <div class="header">
+            投送文本
+            <t-button :disabled="text.length === 0" @click="airdrop('text')">
+              <template #icon>
+                <CloudUploadIcon />
+              </template>
+              AirDrop
+            </t-button>
+          </div>
+        </template>
+        <div class="content">
+          <t-textarea
+            v-model="text"
+            placeholder="请输入要投送的文本内容"
+            clearable
+            :autosize="{
+              minRows: 3,
+              maxRows: 15
+            }"
+          />
         </div>
       </SectionCard>
     </div>
@@ -91,11 +120,19 @@ import EmptyList from '@renderer/components/EmptyList.vue';
 const serviceInfo = useServiceInfo();
 const serviceInfoStoreRefs = storeToRefs(serviceInfo);
 const sendController = useSendController();
+// 选中的文件路径
 const filePaths = ref<string[]>([]);
 
+// 刷新中
 const refreshSpin = ref(false);
+// 显示进度弹框
 const progressPopup = ref(false);
+// 当前视图
+const currentVision = ref<'file' | 'text'>('file');
+// 文本内容
+const text = ref('');
 
+// 设备列表
 const serviceList = ref<Array<ServiceInfo & { selected?: boolean }>>(serviceInfo.availableServices);
 
 watch(serviceInfoStoreRefs.availableServices, () => {
@@ -147,23 +184,37 @@ function toggleProgressPopup() {
 }
 
 // 隔空投送
-function airdrop() {
+function airdrop(type: 'file' | 'text') {
   const targetIds = serviceList.value.filter((item) => item.selected).map(({ id }) => id);
   if (targetIds.length === 0) {
     interact.message.warning('请选择投送设备');
     return;
   }
+  if (type === 'file' && filePaths.value.length === 0) {
+    interact.message.warning('请选择要投送的文件');
+    return;
+  }
+  if (type === 'text' && text.value.length === 0) {
+    interact.message.warning('请输入要投送的文本内容');
+    return;
+  }
   filePaths.value.forEach((filePath) => {
     targetIds.forEach((id) => {
-      sendController.sendFile(filePath, id);
+      if (type === 'file') {
+        sendController.sendFile(filePath, id);
+      } else {
+        sendController.sendText(text.value, id);
+      }
     });
   });
   // 清空选中的文件
   filePaths.value = [];
-  interact.notify.success({
-    title: '开始隔空投送',
-    content: '投送进度可在“火箭🚀面板”查看'
-  });
+  interact.message.success('开始隔空投送，可在“火箭🚀面板”查看进度');
+}
+
+// 切换视图
+function toggleVision() {
+  currentVision.value = currentVision.value === 'file' ? 'text' : 'file';
 }
 </script>
 

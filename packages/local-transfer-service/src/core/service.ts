@@ -551,6 +551,7 @@ export class Service implements IService {
           id: this.id,
           name: this.name,
           ip: ip.address('public', 'ipv4'),
+          port: this.tcpPort,
         },
       }).toJSON(),
       25,

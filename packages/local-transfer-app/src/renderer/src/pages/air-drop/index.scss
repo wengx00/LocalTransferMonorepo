@@ -11,6 +11,12 @@
   @include flex(row, space-between, center);
   width: 100%;
   flex-shrink: 0;
+
+  .row {
+    @include flex(row, flex-start, center);
+    flex-shrink: 0;
+    gap: 0.8rem;
+  }
 }
 
 .airdrop-aio {
