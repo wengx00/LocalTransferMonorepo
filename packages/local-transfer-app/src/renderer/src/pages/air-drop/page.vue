@@ -198,18 +198,22 @@ function airdrop(type: 'file' | 'text') {
     interact.message.warning('请输入要投送的文本内容');
     return;
   }
-  filePaths.value.forEach((filePath) => {
-    targetIds.forEach((id) => {
-      if (type === 'file') {
+  if (type === 'file') {
+    filePaths.value.forEach((filePath) => {
+      targetIds.forEach((id) => {
         sendController.sendFile(filePath, id);
-      } else {
-        sendController.sendText(text.value, id);
-      }
+      });
     });
+    // 清空选中的文件
+    filePaths.value = [];
+    interact.message.success('开始隔空投送，可在“火箭🚀面板”查看进度');
+    return;
+  }
+  // 发送文本
+  targetIds.forEach((id) => {
+    sendController.sendText(text.value, id);
   });
-  // 清空选中的文件
-  filePaths.value = [];
-  interact.message.success('开始隔空投送，可在“火箭🚀面板”查看进度');
+  interact.message.success('开始隔空投送文本🚀');
 }
 
 // 切换视图

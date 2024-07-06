@@ -59,7 +59,7 @@
         <template v-else>
           <transition-group name="list" tag="div" class="content">
             <ClipBoardItem
-              v-for="(item, index) in clipboard"
+              v-for="(item, index) in receiveController.clipboard"
               :key="item"
               :text="item"
               @copy="writeClipboard"
@@ -70,7 +70,7 @@
         <EmptyList
           v-if="
             (currentVision === 'file' && receiveController.taskList.length === 0) ||
-            (currentVision === 'text' && clipboard.length === 0)
+            (currentVision === 'text' && receiveController.clipboard.length === 0)
           "
           style="width: 70%"
           :title="emptyTitle"
@@ -109,8 +109,6 @@ const receiveController = useReceiveController();
 const serviceList = ref<Array<ServiceInfo & { verified?: boolean }>>(serviceInfo.availableServices);
 const refreshSpin = ref(false);
 const currentVision = ref<'file' | 'text'>('file');
-const clipboard = ref<string[]>([]);
-
 const visionTitle = computed(() => (currentVision.value === 'file' ? '接收进度' : '粘贴板'));
 const emptyTitle = computed(() =>
   currentVision.value === 'file' ? '暂无接收任务' : '粘贴板空空如也'
