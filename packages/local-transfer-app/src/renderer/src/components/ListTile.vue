@@ -39,6 +39,7 @@ defineProps<{
   width: 100%;
   overflow: hidden;
   gap: 0.1rem;
+  flex-shrink: 0;
 
   &_primary {
     font-size: 1.7rem;

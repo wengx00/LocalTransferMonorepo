@@ -7,6 +7,8 @@ declare module '@ipc/service' {
     SendFileException,
     SendFileRequest,
     SendFileResult,
+    SendTextRequest,
+    SendTextResult,
     ServiceInfo
   } from 'local-transfer-service';
 
@@ -91,6 +93,12 @@ declare module '@ipc/service' {
        * @throws {SendFileException}
        */
       sendFile(request: Omit<SendFileRequest, 'onLaunch' | 'onDone'>): Promise<SendFileResult>;
+
+      /**
+       * 指定目标发送文本
+       * @param request 发送文本请求
+       */
+      sendText(request: SendTextRequest): Promise<SendTextResult>;
 
       /**
        * 刷新可用设备列表

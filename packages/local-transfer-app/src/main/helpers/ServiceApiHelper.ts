@@ -62,6 +62,9 @@ export default class ServiceApiHelper implements IpcMainHelper<ServiceApi> {
           }
         });
       },
+      async sendText(request) {
+        return service.sendText(request);
+      },
       async getTcpPort() {
         return service.getTcpPort();
       },
