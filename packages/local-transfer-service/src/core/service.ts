@@ -35,18 +35,10 @@ import {
   TransferInfo,
   TransferType,
   IService,
+  ServiceOptions,
+  TaskStatus,
 } from '../utils/type';
 import UdpMessage from '../utils/udp-message';
-
-/**
- * 服务选项
- */
-export interface ServiceOptions {
-  // 下载的根目录
-  downloadRoot: string;
-  // TCP端口，默认30
-  tcpPort?: number;
-}
 
 export class Service implements IService {
   constructor({ downloadRoot }: ServiceOptions) {
@@ -57,6 +49,22 @@ export class Service implements IService {
       // 启动服务时刷新一次可用列表
       this.refresh();
     });
+  }
+
+  cancelTask(batchId: string): void {
+    if (process.env.RUNTIME === 'e2e') {
+      console.log(
+        '[e2e] 取消发送任务, batchId:',
+        batchId,
+        '存在该任务记录:',
+        this.transferTasks.has(batchId),
+      );
+    }
+    const task = this.transferTasks.get(batchId);
+    if (task) {
+      task.cancelled = true;
+      task.errMsg = '主机取消发送任务';
+    }
   }
 
   dispose(): void {
@@ -436,11 +444,14 @@ export class Service implements IService {
 
           onLaunch?.(transferInfo);
 
+          let abort = () => {};
+
           if (socketError) {
             // 假如在事件循环中出现了 Socket 错误，直接结束流程
             return;
           }
           const readStream = createReadStream(path);
+          const { transferTasks } = this;
           try {
             await proxy.sendStream(readStream, size, {
               onDone() {
@@ -460,6 +471,17 @@ export class Service implements IService {
                   progress: percent,
                   speed,
                 });
+                // 探测是否被取消发送
+                if (transferTasks.get(batchId)?.cancelled) {
+                  abort();
+                  setTimeout(() => socket.end());
+                  reject(
+                    JsonResponse.fail(errcode.TASK_CANCELLED, '任务已取消'),
+                  );
+                }
+              },
+              getAbort(trigger) {
+                abort = trigger;
               },
             });
           } catch (err) {
@@ -471,8 +493,16 @@ export class Service implements IService {
         };
 
         proxy.addHandler(proxyHandler);
+        // 加入任务表
+        this.transferTasks.set(batchId, {
+          cancelled: false,
+          errMsg: '',
+        });
 
-        socket.on('end', () => proxy.removeHandler(proxyHandler));
+        socket.on('end', () => {
+          proxy.removeHandler(proxyHandler);
+          this.transferTasks.delete(batchId);
+        });
 
         socket.on('error', (err) => {
           console.log('socket error', err);
@@ -545,6 +575,9 @@ export class Service implements IService {
   // 可用服务变更处理器
   private availableServicesUpdateHandlers!: Set<AvailableServiceUpdateHandler>;
 
+  // 存放当前进行中的发送/接收任务是否被取消
+  private transferTasks!: Map<string, TaskStatus>;
+
   // 初始化 Service 信息
   private initServiceInfo() {
     // 8 位 nanoid，为了达到至少一次碰撞的 1% 概率，需要约 99 天或 200 万个 ID
@@ -558,6 +591,7 @@ export class Service implements IService {
     this.receiveFileHandlers = new Set();
     this.receiveTextHandlers = new Set();
     this.availableServicesUpdateHandlers = new Set();
+    this.transferTasks = new Map();
   }
 
   // 初始化 TCP 服务器
@@ -685,6 +719,11 @@ export class Service implements IService {
           return;
         }
         batchId = transferInfo.batchId;
+        // 加入任务表
+        this.transferTasks.set(batchId, {
+          cancelled: false,
+          errMsg: '',
+        });
         if (transferInfo.type === TransferType.FILE && !writePath) {
           // batchId和时间戳附加到原始文件名
           writePath = resolve(
@@ -765,6 +804,17 @@ export class Service implements IService {
 
       socket.on('end', () => {
         proxy.removeHandler(receiveHandler);
+        // 从任务表中清除
+        this.transferTasks.delete(batchId);
+        if (transferInfo && transferInfo.size > receivedBytes) {
+          // 没发完就结束了
+          this.receiveFileHandlers.forEach((handler) => {
+            handler(
+              transferInfo as any,
+              JsonResponse.fail(errcode.TASK_CANCELLED, '投送任务被中断'),
+            );
+          });
+        }
       });
 
       socket.on('error', (err) => {

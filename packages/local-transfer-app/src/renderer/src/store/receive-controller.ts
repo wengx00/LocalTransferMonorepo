@@ -15,8 +15,8 @@ export interface ReceiveTask {
   expireAfter: number;
 }
 
-// 默认过期时间：5min
-const taskTtl = 5 * 60 * 1000;
+// 默认过期时间：1min
+const taskTtl = 60 * 1000;
 
 export const useReceiveController = defineStore('receive-controller', () => {
   let initialized = false;
@@ -81,6 +81,10 @@ export const useReceiveController = defineStore('receive-controller', () => {
     const now = +new Date();
     taskMap.value.forEach((record) => {
       if (record.expireAfter < now) {
+        interact.notify.error({
+          title: '任务过期',
+          content: `接收 ${record.filename} 超时`
+        });
         taskMap.value.delete(record.batchId);
       }
     });

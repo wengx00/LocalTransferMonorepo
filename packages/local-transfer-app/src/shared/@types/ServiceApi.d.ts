@@ -109,6 +109,11 @@ declare module '@ipc/service' {
        * 关闭设备
        */
       dispose(): Promise<void>;
+
+      /**
+       * 取消任务
+       */
+      cancelTask(batchId: string): Promise<void>;
     };
     listener: {
       receiveFile(handler: ReceiveFileHandler): Promise<void>;

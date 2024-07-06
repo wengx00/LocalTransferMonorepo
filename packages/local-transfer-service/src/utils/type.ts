@@ -1,9 +1,13 @@
 import JsonResponse from './json-response';
 
-// Service初始化选项
-export interface ServiceInitOptions {
-  // 下载根目录
+/**
+ * 服务选项
+ */
+export interface ServiceOptions {
+  // 下载的根目录
   downloadRoot: string;
+  // TCP端口，默认30
+  tcpPort?: number;
 }
 
 // 服务信息
@@ -68,6 +72,9 @@ export interface IService {
 
   // 关闭服务
   dispose(): void;
+
+  // [实验] 取消任务
+  cancelTask(batchId: string): void;
 }
 
 // 发送文件请求
@@ -162,4 +169,10 @@ export interface TransferInfo {
   sourceId: string;
   // 目标ID
   targetId: string;
+}
+
+// 任务状态
+export interface TaskStatus {
+  cancelled: boolean;
+  errMsg?: string;
 }

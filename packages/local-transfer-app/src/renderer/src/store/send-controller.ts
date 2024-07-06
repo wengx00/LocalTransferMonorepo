@@ -53,6 +53,7 @@ export const useSendController = defineStore('send-controller', () => {
     });
   }
 
+  // 发送文件
   async function sendFile(path: string, targetId: string) {
     console.log('触发文件发送任务', path, targetId);
     try {
@@ -70,14 +71,15 @@ export const useSendController = defineStore('send-controller', () => {
       taskMap.value.delete(batchId);
     } catch (err: any) {
       console.log('发送文件时失败', err);
+      const { filename, reason, batchId } = (err ?? {}) as SendFileException;
       if (err?.errMsg) {
         interact.notify.error({
           title: '文件发送失败',
           content: err.errMsg
         });
+        taskMap.value.delete(batchId);
         return;
       }
-      const { filename, reason, batchId } = err as SendFileException;
       interact.notify.error({
         title: '文件发送失败',
         content: `${filename || path}发送失败，错误信息：${reason || 'IPC接口调用异常'}`
@@ -85,6 +87,12 @@ export const useSendController = defineStore('send-controller', () => {
       // 无论成功失败都直接删除记录
       taskMap.value.delete(batchId);
     }
+  }
+
+  // 取消发送
+  async function cancelTask(batchId: string) {
+    await serviceApi.invoke.cancelTask(batchId);
+    interact.message.success('取消发送成功');
   }
 
   async function registryListener() {
@@ -129,6 +137,7 @@ export const useSendController = defineStore('send-controller', () => {
 
     sendFile,
     sendText,
-    registryListener
+    registryListener,
+    cancelTask
   };
 });
