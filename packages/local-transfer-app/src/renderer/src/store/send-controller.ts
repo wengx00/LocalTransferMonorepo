@@ -1,5 +1,10 @@
 import serviceApi from '@renderer/apis/service';
-import { SendFileException, SendTextException, TransferInfo } from 'local-transfer-service';
+import {
+  SendFileException,
+  SendFileResult,
+  SendTextException,
+  TransferInfo
+} from 'local-transfer-service';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import interact from '../utils/interact';
@@ -10,7 +15,7 @@ export interface SendTask {
   speed: number; // 单位 KB/s
   size: number; // 单位 B
   filename: string;
-  targetServiceName: string; // 目标设备别名
+  targetId: string;
 }
 
 export const useSendController = defineStore('send-controller', () => {
@@ -20,7 +25,7 @@ export const useSendController = defineStore('send-controller', () => {
   // 任务列表
   const taskList = computed(() => Array.from(taskMap.value.values()));
 
-  function onLaunchHandler({ filename, batchId, size }: TransferInfo) {
+  function onLaunchHandler({ filename, batchId, size, targetId }: TransferInfo) {
     if (taskMap.value.has(batchId)) {
       // 重复 Launch？这是个么得可能的情况
       return;
@@ -31,8 +36,7 @@ export const useSendController = defineStore('send-controller', () => {
       size,
       progress: 0,
       speed: 0,
-      // TODO: ServiceApi 需要支持
-      targetServiceName: ''
+      targetId
     });
   }
 
@@ -54,6 +58,7 @@ export const useSendController = defineStore('send-controller', () => {
     });
   }
 
+  // 发送文件
   async function sendFile(path: string, targetId: string) {
     console.log('触发文件发送任务', path, targetId);
     try {
@@ -62,7 +67,15 @@ export const useSendController = defineStore('send-controller', () => {
         targetId
       });
       console.log('发送文件结果', result);
-      const { batchId, filename, cost } = result;
+      const { batchId, filename, cost, reason } = result as SendFileResult & SendFileException;
+      if (reason) {
+        interact.notify.error({
+          title: '文件发送失败',
+          content: reason
+        });
+        taskMap.value.delete(batchId);
+        return;
+      }
       interact.notify.success({
         title: '投送成功',
         content: `${filename}发送成功，耗时：${cost}s`
@@ -71,14 +84,15 @@ export const useSendController = defineStore('send-controller', () => {
       taskMap.value.delete(batchId);
     } catch (err: any) {
       console.log('发送文件时失败', err);
+      const { filename, reason, batchId } = (err ?? {}) as SendFileException;
       if (err?.errMsg) {
         interact.notify.error({
           title: '文件发送失败',
           content: err.errMsg
         });
+        taskMap.value.delete(batchId);
         return;
       }
-      const { filename, reason, batchId } = err as SendFileException;
       interact.notify.error({
         title: '文件发送失败',
         content: `${filename || path}发送失败，错误信息：${reason || 'IPC接口调用异常'}`
@@ -86,6 +100,12 @@ export const useSendController = defineStore('send-controller', () => {
       // 无论成功失败都直接删除记录
       taskMap.value.delete(batchId);
     }
+  }
+
+  // 取消发送
+  async function cancelTask(batchId: string) {
+    await serviceApi.invoke.cancelTask(batchId);
+    interact.message.success('取消发送成功');
   }
 
   async function registryListener() {
@@ -130,6 +150,7 @@ export const useSendController = defineStore('send-controller', () => {
 
     sendFile,
     sendText,
-    registryListener
+    registryListener,
+    cancelTask
   };
 });

@@ -7,8 +7,8 @@ import {
 } from 'local-transfer-service';
 
 export default function registerService(service: IService, api: IpcMainApi<ServiceApi>) {
-  const receiveFileHandler: ReceiveFileHandler = (context) => {
-    api.emitter.receiveFile(context);
+  const receiveFileHandler: ReceiveFileHandler = (context, err) => {
+    api.emitter.receiveFile(context, err);
   };
   const receiveTextHandler: ReceiveTextHandler = (context) => {
     api.emitter.receiveText(context);

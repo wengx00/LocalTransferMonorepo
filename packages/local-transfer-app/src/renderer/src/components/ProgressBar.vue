@@ -1,6 +1,9 @@
 <template>
   <div class="progress-bar">
-    <div class="progress-bar_label">{{ label }}</div>
+    <div class="progress-bar_label">
+      <div class="text">{{ label }}</div>
+      <slot name="postfix"></slot>
+    </div>
     <div class="progress-bar_progress">
       <div
         class="progress-bar_progress_done"
@@ -22,6 +25,10 @@
 <script setup lang="ts">
 import { useServiceInfo } from '@renderer/store/service-info';
 import { computed } from 'vue';
+
+defineSlots<{
+  postfix?: () => any;
+}>();
 
 const serviceInfo = useServiceInfo();
 
@@ -51,12 +58,21 @@ const targetName = computed(
   overflow: hidden;
 
   &_label {
+    @include flex(row, space-between, center);
+    gap: 0.4rem;
     width: 100%;
-    font-size: 1.4rem;
-    color: #333;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+
+    .text {
+      flex: 1 0;
+      overflow: hidden;
+      font-size: 1.4rem;
+      color: #333;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .postfix {
+      flex-shrink: 0;
+    }
   }
   &_progress {
     @include flex(row, flex-start, center);
@@ -65,13 +81,13 @@ const targetName = computed(
     border-radius: 10rem;
     background: #f1f1f1;
     overflow: hidden;
-    transition: all 0.3s;
     border-radius: 10rem;
 
     &_done {
       height: 100%;
       background: var(--td-brand-color);
       border-radius: 10rem;
+      transition: all 0.3s;
     }
   }
 

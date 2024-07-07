@@ -58,7 +58,7 @@ export default function makeInstance<T extends IpcApi>(
     const promises: Promise<any>[] = [];
 
     eventHandlers.forEach((eventHandler) => {
-      Promise.resolve(eventHandler.call(null, payload));
+      Promise.resolve(eventHandler.call(null, ...payload));
     });
 
     Promise.allSettled(promises).then((results) => {

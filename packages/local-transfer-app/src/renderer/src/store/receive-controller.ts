@@ -10,13 +10,13 @@ export interface ReceiveTask {
   speed: number;
   size: number;
   filename: string;
-  sourceServiceName: string;
+  sourceId: string;
   // 过期时间
   expireAfter: number;
 }
 
-// 默认过期时间：5min
-const taskTtl = 5 * 60 * 1000;
+// 默认过期时间：1min
+const taskTtl = 60 * 1000;
 
 export const useReceiveController = defineStore('receive-controller', () => {
   let initialized = false;
@@ -35,7 +35,7 @@ export const useReceiveController = defineStore('receive-controller', () => {
     if (error) {
       interact.notify.error({
         title: '接收文件失败',
-        content: `接收 ${filename} 失败，错误信息：${error}`
+        content: `接收 ${filename} 失败，错误信息：${error.errMsg}`
       });
       // 出错时把记录删了
       taskMap.value.delete(batchId);
@@ -53,15 +53,14 @@ export const useReceiveController = defineStore('receive-controller', () => {
     }
     let record: ReceiveTask | undefined = taskMap.value.get(batchId);
     if (!record) {
-      const availableServices = await serviceApi.invoke.getAvailableServices();
-      const target = availableServices.find(({ id }) => id === sourceId);
       record = {
         batchId,
-        progress,
+        // 防止跳变，不保留小数点
+        progress: Number(progress.toFixed(0)),
         speed,
         size,
         filename,
-        sourceServiceName: target?.name || '未知设备',
+        sourceId,
         expireAfter: +new Date() + taskTtl
       };
       // 新增记录
@@ -72,7 +71,7 @@ export const useReceiveController = defineStore('receive-controller', () => {
     taskMap.value.set(batchId, {
       ...record,
       speed,
-      progress,
+      progress: Number(progress.toFixed(0)),
       expireAfter: +new Date() + taskTtl // 刷新 TTL
     });
   };
@@ -82,6 +81,10 @@ export const useReceiveController = defineStore('receive-controller', () => {
     const now = +new Date();
     taskMap.value.forEach((record) => {
       if (record.expireAfter < now) {
+        interact.notify.error({
+          title: '任务过期',
+          content: `接收 ${record.filename} 超时`
+        });
         taskMap.value.delete(record.batchId);
       }
     });

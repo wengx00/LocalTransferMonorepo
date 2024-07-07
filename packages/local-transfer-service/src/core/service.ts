@@ -20,7 +20,12 @@ import { resolve } from 'path';
 import * as ip from 'ip';
 import { nanoid } from 'nanoid';
 
-import { HandlerContext, Protocol, ProtocolStatus } from './protocol';
+import {
+  HandlerContext,
+  Protocol,
+  ProtocolException,
+  ProtocolStatus,
+} from './protocol';
 import errcode from '../utils/errcode';
 import JsonResponse from '../utils/json-response';
 import {
@@ -34,70 +39,12 @@ import {
   ServiceInfo,
   TransferInfo,
   TransferType,
+  IService,
+  ServiceOptions,
+  TaskStatus,
+  SendFileException,
 } from '../utils/type';
 import UdpMessage from '../utils/udp-message';
-
-export interface IService {
-  getId(): string;
-
-  getName(): string;
-
-  setName(name: string): void;
-
-  setTcpPort(port: number): void;
-
-  getTcpPort(): number;
-
-  setDownloadRoot(downloadRoot: string): void;
-
-  getDownloadRoot(): string;
-
-  // 刷新可用设备列表
-  refresh(): void;
-  // 获取可用设备列表
-  getAvailableServices(): ServiceInfo[];
-  // 获取受信设备列表
-  getVerifiedDevices(): ServiceInfo[];
-  // 添加受信设备
-  addVerifiedDevice(id: string): ServiceInfo[];
-  // 删除受信设备
-  removeVerifiedDevice(id: string): ServiceInfo[];
-  // 清空受信列表
-  clearVerifiedDevices(): ServiceInfo[];
-  // 指定目标发送文件
-  sendFile(request: SendFileRequest): Promise<SendFileResult>;
-  // 注册接收文件监听器
-  addReceiveFileHandler(handler: ReceiveFileHandler): void;
-  // 注册接收文本监听器
-  addReceiveTextHandler(handler: ReceiveTextHandler): void;
-  // 删除接收文件监听器
-  removeFileReceiveHandler(handler: ReceiveFileHandler): void;
-  // 删除接收文本监听器
-  removeReceiveTextHandler(handler: ReceiveTextHandler): void;
-  // 发送文本
-  sendText(request: SendTextRequest): Promise<SendTextResult>;
-  // 注册可用服务更新监听器
-  addAvailableServicesUpdateHandler(
-    handler: AvailableServiceUpdateHandler,
-  ): void;
-  // 删除可用服务更新监听器
-  removeAvailableServicesUpdateHandler(
-    handler: AvailableServiceUpdateHandler,
-  ): void;
-
-  // 关闭服务
-  dispose(): void;
-}
-
-/**
- * 服务选项
- */
-export interface ServiceOptions {
-  // 下载的根目录
-  downloadRoot: string;
-  // TCP端口，默认30
-  tcpPort?: number;
-}
 
 export class Service implements IService {
   constructor({ downloadRoot }: ServiceOptions) {
@@ -108,6 +55,22 @@ export class Service implements IService {
       // 启动服务时刷新一次可用列表
       this.refresh();
     });
+  }
+
+  cancelTask(batchId: string): void {
+    if (process.env.RUNTIME === 'e2e') {
+      console.log(
+        '[e2e] 取消发送任务, batchId:',
+        batchId,
+        '存在该任务记录:',
+        this.transferTasks.has(batchId),
+      );
+    }
+    const task = this.transferTasks.get(batchId);
+    if (task) {
+      task.cancelled = true;
+      task.errMsg = '主机取消发送任务';
+    }
   }
 
   dispose(): void {
@@ -176,6 +139,7 @@ export class Service implements IService {
         batchId,
         type: TransferType.TEXT,
         sourceId: this.id,
+        targetId,
       };
 
       const socket = createConnection({
@@ -408,6 +372,7 @@ export class Service implements IService {
           size: res.size,
           type: TransferType.FILE,
           sourceId: this.id,
+          targetId,
         };
 
         console.log('TransferInfo: ', transferInfo);
@@ -485,11 +450,14 @@ export class Service implements IService {
 
           onLaunch?.(transferInfo);
 
+          let abort = () => {};
+
           if (socketError) {
             // 假如在事件循环中出现了 Socket 错误，直接结束流程
             return;
           }
           const readStream = createReadStream(path);
+          const { transferTasks } = this;
           try {
             await proxy.sendStream(readStream, size, {
               onDone() {
@@ -499,9 +467,12 @@ export class Service implements IService {
                 });
               },
               onError(err) {
-                reject(
-                  JsonResponse.fail(errcode.PROTOCOL_EXCEPTION, err.message),
-                );
+                console.log('发送文件时出错', err);
+                // eslint-disable-next-line prefer-promise-reject-errors
+                reject({
+                  reason: '发送文件时出错',
+                  batchId,
+                } as SendFileException);
               },
               onProgress(percent, speed) {
                 onProgress?.({
@@ -509,9 +480,26 @@ export class Service implements IService {
                   progress: percent,
                   speed,
                 });
+                if (transferTasks.get(batchId)?.cancelled) {
+                  abort();
+                  setTimeout(() => socket.end());
+                  transferTasks.delete(batchId);
+                }
+              },
+              getAbort(trigger) {
+                abort = trigger;
               },
             });
-          } catch (err) {
+          } catch (err: any) {
+            const error: ProtocolException = err;
+            if (error.status === ProtocolStatus.CANCELLED) {
+              // eslint-disable-next-line prefer-promise-reject-errors
+              reject({
+                reason: '用户取消发送',
+                batchId,
+              });
+              return;
+            }
             console.log('发送文件时出错', err);
           } finally {
             done = true;
@@ -520,8 +508,16 @@ export class Service implements IService {
         };
 
         proxy.addHandler(proxyHandler);
+        // 加入任务表
+        this.transferTasks.set(batchId, {
+          cancelled: false,
+          errMsg: '',
+        });
 
-        socket.on('end', () => proxy.removeHandler(proxyHandler));
+        socket.on('end', () => {
+          proxy.removeHandler(proxyHandler);
+          this.transferTasks.delete(batchId);
+        });
 
         socket.on('error', (err) => {
           console.log('socket error', err);
@@ -594,6 +590,9 @@ export class Service implements IService {
   // 可用服务变更处理器
   private availableServicesUpdateHandlers!: Set<AvailableServiceUpdateHandler>;
 
+  // 存放当前进行中的发送/接收任务是否被取消
+  private transferTasks!: Map<string, TaskStatus>;
+
   // 初始化 Service 信息
   private initServiceInfo() {
     // 8 位 nanoid，为了达到至少一次碰撞的 1% 概率，需要约 99 天或 200 万个 ID
@@ -607,6 +606,7 @@ export class Service implements IService {
     this.receiveFileHandlers = new Set();
     this.receiveTextHandlers = new Set();
     this.availableServicesUpdateHandlers = new Set();
+    this.transferTasks = new Map();
   }
 
   // 初始化 TCP 服务器
@@ -734,6 +734,11 @@ export class Service implements IService {
           return;
         }
         batchId = transferInfo.batchId;
+        // 加入任务表
+        this.transferTasks.set(batchId, {
+          cancelled: false,
+          errMsg: '',
+        });
         if (transferInfo.type === TransferType.FILE && !writePath) {
           // batchId和时间戳附加到原始文件名
           writePath = resolve(
@@ -801,11 +806,9 @@ export class Service implements IService {
           writeStream?.close();
           // 重置状态
           writeStream = null;
-          transferInfo = null;
           writePath = '';
           batchId = '';
           lastReceivedTime = 0;
-          receivedBytes = 0;
           chunk = Buffer.alloc(0);
         }
       };
@@ -814,6 +817,23 @@ export class Service implements IService {
 
       socket.on('end', () => {
         proxy.removeHandler(receiveHandler);
+        // 从任务表中清除
+        this.transferTasks.delete(batchId);
+        if (process.env.RUNTIME === 'e2e') {
+          console.log('[e2e] Socket end. totalReceivedBytes:', receivedBytes);
+        }
+        if (transferInfo && transferInfo.size > receivedBytes) {
+          // 没发完就结束了
+          console.log('投送任务被中断');
+          this.receiveFileHandlers.forEach((handler) => {
+            handler(
+              transferInfo as any,
+              JsonResponse.fail(errcode.TASK_CANCELLED, '投送任务被中断'),
+            );
+          });
+        }
+        transferInfo = null;
+        receivedBytes = 0;
       });
 
       socket.on('error', (err) => {

@@ -73,6 +73,9 @@ export default class ServiceApiHelper implements IpcMainHelper<ServiceApi> {
       },
       async dispose() {
         return service.dispose();
+      },
+      async cancelTask(batchId) {
+        return service.cancelTask(batchId);
       }
     };
   }

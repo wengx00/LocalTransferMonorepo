@@ -9,6 +9,7 @@ export enum ProtocolStatus {
   HEADER_PENDING,
   BODY_PENDING,
   DONE,
+  CANCELLED,
 }
 
 /**
@@ -41,6 +42,7 @@ export interface ProtocolCallbackOptions {
   onProgress?: (percent: number, speed: number) => any;
   onDone?: () => any;
   onError?: (err: ProtocolException) => any;
+  getAbort?: (abort: () => void) => any;
 }
 
 /**
@@ -132,7 +134,14 @@ export class Protocol {
   ) {
     return new Promise<void>((resolve, reject) => {
       try {
-        const { onProgress, onDone, onError } = options || {};
+        const { onProgress, onDone, onError, getAbort } = options || {};
+        let aborted = false;
+
+        const abort = () => {
+          aborted = true;
+          stream.destroy();
+        };
+        getAbort?.(abort);
 
         // Update Status
         this.sendStatus = ProtocolStatus.HEADER_PENDING;
@@ -165,8 +174,22 @@ export class Protocol {
             return;
           }
           this.sendStatus = ProtocolStatus.DONE;
-          onDone?.();
-          resolve();
+          if (!aborted) {
+            onDone?.();
+            resolve();
+          }
+        });
+
+        stream.on('close', () => {
+          if (aborted) {
+            reject(
+              new ProtocolException(
+                'send',
+                ProtocolStatus.CANCELLED,
+                new Error('Protocol Aborted.'),
+              ),
+            );
+          }
         });
 
         stream.on('data', (chunk) => {
@@ -227,5 +250,12 @@ export class Protocol {
    */
   removeHandler(handler: (context: HandlerContext) => any) {
     this.hander.delete(handler);
+  }
+
+  /**
+   * 获取当前绑定的Socket
+   */
+  getSocket() {
+    return this.socket;
   }
 }
