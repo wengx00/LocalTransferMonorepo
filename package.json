@@ -7,6 +7,8 @@
   "scripts": {
     "preinstall": "npx only-allow pnpm",
     "changeset": "changeset",
+    "changeset:pre": "changeset pre",
+    "changeset:status": "changeset status",
     "version-package": "changeset version",
     "prepare": "husky install",
     "lint": "node --max_old_space_size=8192 ./node_modules/eslint/bin/eslint.js --fix --color --cache"

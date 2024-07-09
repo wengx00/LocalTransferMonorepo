@@ -30,6 +30,14 @@ npm i -g pnpm
 pnpm install
 ```
 
+### 构建 Service 包
+
+无论是本地运行还是生产构建，App 都依赖于底层的 Service 包，需要先进入 `packages/local-transfer-service` 进行构建
+
+简单来说，就是进入 Service 目录运行 `pnpm build`，成功后再进行 App 开发环境启动或生产打包
+
+Service 打包的详细指引请查看 `packages/local-transfer-service/README.md`
+
 ### 开发环境启动
 
 ```bash
@@ -198,3 +206,9 @@ serviceApi.listener.onReceiveFile((context) => {
 可以在 `@pages/test/page.vue` 中看到测试的示例代码，包含调用成功提示、异常捕获等状态提示。
 
 注意示例代码中混用了 `async/await` 和 Promise 回调（大杂烩），只是为了说明这两种方式都可以，在实际页面开发中请尽量保持统一和规范。
+
+### IPC 常见问题
+
+1. IPC 通信接口只能接受可以被[结构化克隆](https://developer.mozilla.org/zh-CN/docs/Web/API/Web_Workers_API/Structured_clone_algorithm)的数据，简单来说，有下面几种常见的情况是不被支持的：
+   - 函数
+   - 包含不支持数据的对象
