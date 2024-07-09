@@ -51,13 +51,13 @@ export default class ServiceApiHelper implements IpcMainHelper<ServiceApi> {
           onLaunch(context) {
             webContents.send(channelName, {
               cmd: 'sendFileOnLaunch',
-              payload: context
+              payload: [context]
             });
           },
           onProgress(context) {
             webContents.send(channelName, {
               cmd: 'sendFileOnProgress',
-              payload: context
+              payload: [context]
             });
           }
         });
