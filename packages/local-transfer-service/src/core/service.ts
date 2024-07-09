@@ -751,6 +751,8 @@ export class Service implements IService {
         }
 
         writeStream?.write(buffer);
+        lastReceivedBytes += buffer.length;
+        receivedBytes += buffer.length;
 
         // 接收 TEXT 时直接写入 Buffer
         if (transferInfo.type === TransferType.TEXT) {
@@ -767,13 +769,13 @@ export class Service implements IService {
           }
           const gap = currentTime - lastReceivedTime;
 
-          lastReceivedBytes += buffer.length;
-          receivedBytes += buffer.length;
-
           if (gap >= 1000 || done) {
             // 超过1s或已结束，回调onProgress
             const progress = Number(((receivedBytes / total) * 100).toFixed(2));
             const speed = Number((lastReceivedBytes / 1000 / gap).toFixed(2));
+            if (process.env.RUNTIME === 'e2e') {
+              console.log('[e2e] onProgress: ', progress, 'speed: ', speed);
+            }
             this.receiveFileHandlers.forEach((handler) => {
               handler({
                 ...transferInfo!,
