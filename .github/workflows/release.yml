@@ -2,7 +2,6 @@ name: Master PR 流水线
 
 
 on:
-  on:
   push:
     branches: 
       - master
@@ -52,7 +51,7 @@ jobs:
     needs:
       - service_build_check
       - app_build_check
-    name: Changelog PR or Release
+    name: Changeset 版本生成
     # 这里判断仓库owner是否是我自己，为了避免别人 fork 仓库触发
     if: ${{ github.repository_owner == 'wengx00' }}
     runs-on: ubuntu-latest
