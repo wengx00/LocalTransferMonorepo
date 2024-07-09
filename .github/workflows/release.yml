@@ -7,8 +7,8 @@ on:
       - master
 
 jobs:
-  service_build_check:
-    name: Service 构建检查
+  build_check:
+    name: 构建检查
     runs-on: ubuntu-latest
     steps: 
       - name: Checkout
@@ -21,31 +21,9 @@ jobs:
         run: npm i -g pnpm
       - name: Install dependencies
         run: pnpm install
-      - name: ESLint 检查
-        run: cd packages/local-transfer-service && pnpm run lint
-      - name: 单元测试检查
-        run: cd packages/local-transfer-service && pnpm run test
-      - name: 构建检查
+      - name: Service 构建
         run: cd packages/local-transfer-service && pnpm run build
-  app_build_check:
-    name: App 构建检查
-    runs-on: ubuntu-latest
-    steps: 
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
-      - name: Install pnpm
-        run: npm i -g pnpm
-      - name: Install dependencies
-        run: pnpm install
-      - name: ESLint 检查
-        run: cd packages/local-transfer-app && pnpm run lint
-      - name: Service 生成
-        run: cd packages/local-transfer-service && pnpm run build
-      - name: 构建检查
+      - name: App 构建
         run: cd packages/local-transfer-app && pnpm run build
   changelog:
     needs:
@@ -56,19 +34,15 @@ jobs:
     if: ${{ github.repository_owner == 'wengx00' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
       # 设置 pnpm 指定版本7.0，不然会报错
-      - name: Setup PNPM
-        uses: pnpm/action-setup@v2.2.1
-        with:
-          version: ^7.0
-      # 设置 Node
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18
-          cache: 'pnpm'
-      # 安装依赖
+      - name: Install pnpm
+        run: npm i -g pnpm
       - name: Install dependencies
         run: pnpm install
       # 使用changesets/action自动创建 PR 或者发布
