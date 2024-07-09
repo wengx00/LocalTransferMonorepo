@@ -8,7 +8,50 @@ on:
       - master
 
 jobs:
+  service_build_check:
+    name: Service 构建检查
+    runs-on: ubuntu-latest
+    steps: 
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - name: Install pnpm
+        run: npm i -g pnpm
+      - name: Install dependencies
+        run: pnpm install
+      - name: ESLint 检查
+        run: cd packages/local-transfer-service && pnpm run lint
+      - name: 单元测试检查
+        run: cd packages/local-transfer-service && pnpm run test
+      - name: 构建检查
+        run: cd packages/local-transfer-service && pnpm run build
+  app_build_check:
+    name: App 构建检查
+    runs-on: ubuntu-latest
+    steps: 
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - name: Install pnpm
+        run: npm i -g pnpm
+      - name: Install dependencies
+        run: pnpm install
+      - name: ESLint 检查
+        run: cd packages/local-transfer-app && pnpm run lint
+      - name: Service 生成
+        run: cd packages/local-transfer-service && pnpm run build
+      - name: 构建检查
+        run: cd packages/local-transfer-app && pnpm run build
   changelog:
+    needs:
+      - service_build_check
+      - app_build_check
     name: Changelog PR or Release
     # 这里判断仓库owner是否是我自己，为了避免别人 fork 仓库触发
     if: ${{ github.repository_owner == 'wengx00' }}
@@ -20,7 +63,6 @@ jobs:
         uses: pnpm/action-setup@v2.2.1
         with:
           version: ^7.0
-
       # 设置 Node
       - name: Setup Node
         uses: actions/setup-node@v3
@@ -30,12 +72,8 @@ jobs:
       # 安装依赖
       - name: Install dependencies
         run: pnpm install
-      - name: Service 生成
-        run: cd packages/local-transfer-service && pnpm run build
-      - name: App 生成
-        run: cd packages/local-transfer-app && pnpm run build
       # 使用changesets/action自动创建 PR 或者发布
-      - name: Create Release Pull Request or Publish
+      - name: 自动更改版本
         id: changesets
         uses: changesets/action@v1
         with:

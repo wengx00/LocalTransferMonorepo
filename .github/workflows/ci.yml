@@ -3,13 +3,11 @@ name: 构建检查流水线
 on:
   push:
     branches: 
-      - master
       - release/*
       - fix/*
       - feature/*
   pull_request:
     branches:
-      - master
       - release/*
       - fix/*
       - feature/*
