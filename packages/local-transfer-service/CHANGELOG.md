@@ -1,5 +1,11 @@
 # local-transfer-service
 
+## 1.0.1
+
+### Patch Changes
+
+- 7ac0218: 修复已知问题
+
 ## 1.0.0
 
 ### Major Changes
