@@ -6,9 +6,9 @@ Monorepo 是指一个仓库之中有多个项目/模块（packages），本仓�
 
 1. 不要在 `master` 分支上做任何直接变更
 
-2. App 的开发在 `release/app` 分支上进行，Service 的开发在 `release/service` 分支上进行
+2. App 的开发在 `release/app` 分支上进行，Service 的开发在 `release/service` 分支上进行，Bugfixes 可以在 `fix/个人ID` 分支进行
 
-3. 经过自动流水线（还在配置中）测试过后，可以在不同的 `release` 分支上对 `master` 分支提出 Pull Request（PR），经过至少一个不是自己的成员 Code Review 后可以 Merge 进 `master` 分支
+3. 经过自动流水线测试过后，可以在不同的 `release` 分支上对 `master` 分支提出 Pull Request（PR），经过至少一个不是自己的成员 Code Review 后可以 Merge 进 `master` 分支
 
 4. 所有 Commits 都请按照 [Conventional Commits 规范](https://www.conventionalcommits.org/zh-hans/v1.0.0/#%e7%ba%a6%e5%ae%9a%e5%bc%8f%e6%8f%90%e4%ba%a4%e8%a7%84%e8%8c%83) 进行，以下是部分消息含义的速览：
 
@@ -92,3 +92,10 @@ Monorepo 是指一个仓库之中有多个项目/模块（packages），本仓�
 - 此时 Lockfile 处于**信息丢失**状态，你只需运行一次 `pnpm install` 即可自动修复。
 
 > 再次提醒，在项目根目录、项目子目录下都只用 `pnpm` 作为包管理工具，不要使用 `npm` | `yarn` | `cnpm` 等。
+
+### App 构建问题
+
+1. 检查 Node.js 版本 `>= 18`
+2. 检查 Electron 是否成功安装
+3. 检查 `packages/local-transfer-service` 是否成功构建
+4. 首次进行 Windows 生产环境构建时，需要联网下载 `nsis`，所以请检查网络环境
