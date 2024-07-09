@@ -27,8 +27,7 @@ jobs:
         run: cd packages/local-transfer-app && pnpm run build
   changelog:
     needs:
-      - service_build_check
-      - app_build_check
+      - build_check
     name: Changeset 版本生成
     # 这里判断仓库owner是否是我自己，为了避免别人 fork 仓库触发
     if: ${{ github.repository_owner == 'wengx00' }}
