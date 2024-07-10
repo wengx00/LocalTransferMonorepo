@@ -101,7 +101,7 @@
 </template>
 
 <script setup lang="ts">
-import serviceApi from '@renderer/apis/service';
+import EmptyList from '@renderer/components/EmptyList.vue';
 import FileSelectorAio from '@renderer/components/FileSelectorAio.vue';
 import ListTile from '@renderer/components/ListTile.vue';
 import PageHeader from '@renderer/components/PageHeader.vue';
@@ -112,10 +112,8 @@ import { useServiceInfo } from '@store/service-info';
 import { ServiceInfo } from 'local-transfer-service';
 import { storeToRefs } from 'pinia';
 import { CloseIcon, CloudUploadIcon, RefreshIcon, RocketIcon } from 'tdesign-icons-vue-next';
+import { ref, watch } from 'vue';
 import ProgressPopup from './components/ProgressPopup.vue';
-import { watch } from 'vue';
-import { ref } from 'vue';
-import EmptyList from '@renderer/components/EmptyList.vue';
 
 const serviceInfo = useServiceInfo();
 const serviceInfoStoreRefs = storeToRefs(serviceInfo);
@@ -154,12 +152,7 @@ async function refresh() {
   setTimeout(() => {
     refreshSpin.value = false;
   }, 500);
-  try {
-    await serviceApi.invoke.refresh();
-    interact.message.success('设备列表刷新成功');
-  } catch {
-    interact.message.error('设备列表刷新失败，请稍后重试');
-  }
+  serviceInfo.refreshServices();
 }
 
 // 选择文件

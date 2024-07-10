@@ -82,12 +82,10 @@
 </template>
 
 <script setup lang="ts">
-import serviceApi from '@renderer/apis/service';
 import EmptyList from '@renderer/components/EmptyList.vue';
 import PageHeader from '@renderer/components/PageHeader.vue';
 import ProgressBar from '@renderer/components/ProgressBar.vue';
 import SectionCard from '@renderer/components/SectionCard.vue';
-import ClipBoardItem from './components/ClipBoardItem.vue';
 import { useReceiveController } from '@renderer/store/receive-controller';
 import { useServiceInfo } from '@renderer/store/service-info';
 import interact from '@renderer/utils/interact';
@@ -95,12 +93,12 @@ import { ServiceInfo } from 'local-transfer-service';
 import { storeToRefs } from 'pinia';
 import { FaceRetouchingIcon, RefreshIcon } from 'tdesign-icons-vue-next';
 import { ref, watch } from 'vue';
+import ClipBoardItem from './components/ClipBoardItem.vue';
 
 import EmptyTaskListImage from '@assets/image/Empty-Box.png';
-import { computed } from 'vue';
 import nativeApi from '@renderer/apis/native';
 import ListTile from '@renderer/components/ListTile.vue';
-import { onMounted } from 'vue';
+import { computed, onMounted } from 'vue';
 
 const serviceInfo = useServiceInfo();
 const serviceInfoStoreRefs = storeToRefs(serviceInfo);
@@ -139,12 +137,7 @@ async function refresh() {
   setTimeout(() => {
     refreshSpin.value = false;
   }, 500);
-  try {
-    await serviceApi.invoke.refresh();
-    interact.message.success('设备列表刷新成功');
-  } catch {
-    interact.message.error('设备列表刷新失败，请稍后重试');
-  }
+  serviceInfo.refreshServices();
 }
 
 // 切换授权
