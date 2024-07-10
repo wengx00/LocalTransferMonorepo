@@ -1,12 +1,18 @@
 <script setup lang="ts">
 import { reactive } from 'vue';
 import ListTile from './ListTile.vue';
+import { useAppConfig } from '@renderer/store/app-config';
 
 const versions = reactive({ ...window.electron.process.versions });
+const appConfig = useAppConfig();
 </script>
 
 <template>
   <div class="versions">
+    <ListTile class="item" direction="row" gap="1rem">
+      App 版本
+      <template #secondary>v{{ appConfig.version }}</template>
+    </ListTile>
     <ListTile class="item" direction="row" gap="1rem">
       Electron
       <template #secondary>v{{ versions.electron }}</template>

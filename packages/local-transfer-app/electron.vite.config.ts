@@ -1,6 +1,8 @@
 import { resolve } from 'path';
 import { defineConfig, externalizeDepsPlugin, loadEnv } from 'electron-vite';
 import vue from '@vitejs/plugin-vue';
+import versionGenerator from './plugins/plugin-version-generator';
+import packageJson from './package.json';
 
 export default defineConfig(({ mode }) => ({
   main: {
@@ -25,7 +27,12 @@ export default defineConfig(({ mode }) => ({
         '@store': resolve('src/renderer/src/store')
       }
     },
-    plugins: [vue()],
+    plugins: [
+      vue(),
+      versionGenerator({
+        version: packageJson.version
+      })
+    ],
     base: loadEnv(mode, __dirname)?.VITE_BASE || '/',
     css: {
       preprocessorOptions: {
