@@ -1,7 +1,7 @@
 {
   "name": "local-transfer-app",
   "private": true,
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "跨平台内网隔空投送工具",
   "main": "./out/main/index.js",
   "author": "ccweng",
