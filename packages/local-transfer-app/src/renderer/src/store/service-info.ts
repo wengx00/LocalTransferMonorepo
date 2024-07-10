@@ -19,6 +19,13 @@ export const useServiceInfo = defineStore('service-info', () => {
   // 受信设备列表
   const verifiedServices = ref<ServiceInfo[]>([]);
 
+  const initServicesTask = async () => {
+    availableServices.value = await serviceApi.invoke.getAvailableServices();
+    verifiedServices.value = await serviceApi.invoke.getVerifiedDevices();
+    console.log('Available Services:', availableServices.value);
+    console.log('Verified Services:', verifiedServices.value);
+  };
+
   // 从 ServiceAPI 初始化设备信息
   async function initInfo() {
     const initNameTask = async () => {
@@ -28,16 +35,11 @@ export const useServiceInfo = defineStore('service-info', () => {
         const osType = await nativeApi.invoke.getPlatform();
         const hostname = await nativeApi.invoke.getHostname();
         console.log('系统类型', osType, '主机名', hostname);
-        await setServiceName(`${osType}-${hostname}`);
+        const name = `${osType}-${hostname}`;
+        await setServiceName(name);
         console.log('使用默认设备名称', serviceName.value);
+        serviceName.value = name;
       }
-    };
-
-    const initServicesTask = async () => {
-      availableServices.value = await serviceApi.invoke.getAvailableServices();
-      verifiedServices.value = await serviceApi.invoke.getVerifiedDevices();
-      console.log('Available Services:', availableServices.value);
-      console.log('Verified Services:', verifiedServices.value);
     };
 
     // 注册更新回调
@@ -85,6 +87,18 @@ export const useServiceInfo = defineStore('service-info', () => {
     downloadRoot.value = path;
   }
 
+  // 刷新设备列表
+  async function refreshServices() {
+    try {
+      await serviceApi.invoke.refresh();
+      interact.message.success('触发刷新成功');
+      setTimeout(initServicesTask, 500);
+    } catch {
+      interact.message.error('触发刷新失败，请稍后重试');
+      return;
+    }
+  }
+
   return {
     serviceName,
     serviceId,
@@ -97,6 +111,7 @@ export const useServiceInfo = defineStore('service-info', () => {
     setServiceName,
     setDownloadRoot,
     authorize,
-    unauthorize
+    unauthorize,
+    refreshServices
   };
 });
