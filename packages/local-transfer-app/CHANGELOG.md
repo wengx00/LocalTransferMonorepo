@@ -1,5 +1,11 @@
 # local-transfer-app
 
+## 1.0.2
+
+### Patch Changes
+
+- fd75439: 新增版本号查看
+
 ## 1.0.1
 
 ### Patch Changes
