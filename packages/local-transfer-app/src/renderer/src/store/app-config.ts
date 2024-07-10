@@ -1,8 +1,12 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import constants from '../utils/constants';
+import appVersion from 'app-version';
 
 export const useAppConfig = defineStore('app-config', () => {
+  // APP版本
+  const version = appVersion;
+
   // 窗口大小
   const windowSize = ref({
     width: window.innerWidth,
@@ -45,6 +49,7 @@ export const useAppConfig = defineStore('app-config', () => {
     enableMobileLayout,
     expandMenu,
     currentMenuValue,
+    version,
 
     updateWindowSize,
     setExpandMenu,
